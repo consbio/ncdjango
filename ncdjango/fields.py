@@ -8,24 +8,24 @@ from clover.utilities.color import Color
 from django.core.exceptions import ValidationError
 from django.db import models
 from django.utils.six import with_metaclass
-from django.utils.translation import ugettext as _
+from django.utils.translation import ugettext_lazy as _
 
 
 class BoundingBoxField(with_metaclass(models.SubfieldBase, models.TextField)):
     description = _('Bounding box with associated projection information')
 
     def to_python(self, value):
-        if value is None or isinstance(value, BBox):
+        if not value or isinstance(value, BBox):
             return value
 
         try:
             data = json.loads(value)
             return BBox((data['xmin'], data['ymin'], data['xmax'], data['ymax']), projection=data.get('proj4'))
         except (ValueError, KeyError):
-            raise ValidationError
+            raise ValidationError("")
 
     def get_prep_value(self, value):
-        if value is None:
+        if not value:
             return value
 
         return json.dumps({
@@ -41,7 +41,7 @@ class RasterRendererField(with_metaclass(models.SubfieldBase, models.TextField))
     description = _('A class to generate images from raster data')
 
     def to_python(self, value):
-        if value is None or isinstance(value, RasterRenderer):
+        if not value or isinstance(value, RasterRenderer):
             return value
 
         try:
@@ -67,12 +67,12 @@ class RasterRendererField(with_metaclass(models.SubfieldBase, models.TextField))
                     'labels': data['labels']
                 })
         except (ValueError, KeyError):
-            raise ValidationError
+            raise ValidationError("")
 
         return cls(**kwargs)
 
     def get_prep_value(self, value):
-        if value is None:
+        if not value:
             return value
 
         params = {}
@@ -91,7 +91,7 @@ class RasterRendererField(with_metaclass(models.SubfieldBase, models.TextField))
                 'labels': value.labels
             }
         else:
-            raise ValidationError
+            raise ValidationError("")
 
         params.update({
             'colormap': [(c[0], c[1].to_tuple()) for c in value.colormap],
