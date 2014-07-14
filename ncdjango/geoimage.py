@@ -125,7 +125,7 @@ class GeoImage(object):
                 max(target_size[1], self.image.size[1])
             )
             im = Image.new("RGBA", canvas_size, (0, 0, 0, 0))
-            im.paste(self.image, (0,0))
+            im.paste(self.image, (0, 0))
             new_image = im.transform(
                 target_size, Image.MESH, self._create_mesh(target_bbox, target_size), Image.NEAREST
             )
