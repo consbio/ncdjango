@@ -8,10 +8,6 @@ from ncdjango.utils import auto_memoize
 SERVICE_DATA_ROOT = getattr(settings, 'NC_SERVICE_DATA_ROOT', '/var/ncdjango/services/')
 
 
-class Folder(models.Model):
-    name = models.CharField(max_length=100, db_index=True)
-
-
 class Service(models.Model):
     """Map service"""
 
@@ -36,7 +32,6 @@ class Service(models.Model):
 
     name = models.CharField(max_length=256, db_index=True)
     description = models.TextField(null=True)
-    folder = models.ForeignKey(Folder)
     data_path = models.FilePathField(SERVICE_DATA_ROOT)
     projection = models.TextField()  # PROJ4 definition
     full_extent = BoundingBoxField()

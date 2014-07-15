@@ -11,6 +11,10 @@ DEFAULT_BACKGROUND_COLOR = Color(0, 0, 0, 0)
 class ConfigurationBase(object):
     """Base request configuration class"""
 
+    def __init__(self, variable):
+        self.variable = variable
+        self.time_index = None
+
     def set_time_index_from_datetime(self, value, best_fit=True):
         """
         Sets the time_index parameter from a datetime using start/end/interval/units information from the service
@@ -31,12 +35,13 @@ class RenderConfiguration(ConfigurationBase):
     """Properties for a render image request"""
 
     def __init__(self, variable, **kwargs):
-        self.variable = variable
+        super(RenderConfiguration, self).__init__(variable)
+
         self.extent = kwargs.get('extent', variable.service.full_extent)
         self.renderer = kwargs.get('render', variable.renderer)
         self.size = kwargs.get('size', DEFAULT_IMAGE_SIZE)
         self.time_index = kwargs.get('time_index')
-        self.format = kwargs.get('format', DEFAULT_IMAGE_FORMAT)
+        self.image_format = kwargs.get('image_format', DEFAULT_IMAGE_FORMAT)
         self.background_color = kwargs.get('background_color', DEFAULT_BACKGROUND_COLOR)
 
     @property
@@ -65,7 +70,8 @@ class IdentifyConfiguration(ConfigurationBase):
     ALL_TIME = -1
 
     def __init__(self, variable, point, projection, time_index=ALL_TIME):
-        self.variable = variable
+        super(IdentifyConfiguration, self).__init__(variable)
+
         self.point = point
         self.projection = projection
         self.time_index = time_index
