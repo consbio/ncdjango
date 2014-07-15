@@ -1,5 +1,11 @@
 from bisect import bisect_left
 from functools import wraps
+import os
+import re
+import pyproj
+
+EPSG_RE = re.compile(r'\+init=epsg:([0-9]+)')
+PYPROJ_EPSG_FILE_RE = re.compile(r'<([0-9]+)([^<]+)<')
 
 
 def auto_memoize(func):
@@ -33,3 +39,29 @@ def best_fit(li, value):
         return index
     else:
         return index-1
+
+
+def proj4_to_epsg(projection):
+    """Attempts to convert a PROJ4 projection object to an EPSG code and returns None if conversion fails"""
+
+    def make_definition(value):
+        return {x.strip().lower() for x in value.split('+') if x}
+
+    # Use the EPSG in the definition if available
+    match = EPSG_RE.search(projection.srs)
+    if match:
+        return int(match.group(1))
+
+    # Otherwise, try to look up the EPSG from the pyproj data file
+    pyproj_data_dir = os.path.join(os.dirname(pyproj.__file__), 'data')
+    pyproj_epsg_file = os.path.join(pyproj_data_dir, 'epsg')
+    if os.path.exists(pyproj_epsg_file):
+        definition = make_definition(projection.srs)
+        f = open(pyproj_epsg_file, 'r')
+        for line in f.readlines():
+            match = PYPROJ_EPSG_FILE_RE.search(line)
+            if match:
+                file_definition = make_definition(match.group(2))
+                if definition == file_definition:
+                    return int(match.group(1))
+    return None

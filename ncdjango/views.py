@@ -2,6 +2,7 @@ from PIL import Image
 from django.conf import settings
 from django.core.cache import get_cache
 from django.http.response import HttpResponseBadRequest, HttpResponse
+from django.shortcuts import get_object_or_404
 from django.views.generic import View
 import time
 import netCDF4
@@ -9,6 +10,7 @@ import numpy
 import six
 from ncdjango.exceptions import ConfigurationError
 from ncdjango.geoimage import GeoImage
+from ncdjango.models import Service
 
 CACHE_FULL_EXTENT = getattr(settings, 'NC_CACHE_FULL_EXTENT', False)
 FULL_EXTENT_CACHE = getattr(settings, 'NC_FULL_EXTENT_CACHE', 'default')
@@ -18,15 +20,16 @@ FULL_EXTENT_CACHE_KEY = "ncdjango_full_extent_{hash}"
 FULL_EXTENT_PENDING_KEY = "ncdjango_full_extent_pending_{hash}"
 
 
-class GetImageView(View):
+class GetImageViewBase(View):
     """Base view for handling image render requests. This view is implemented by specific interfaces."""
 
     http_method_names = ['get', 'post', 'head', 'options']
 
     def __init__(self, *args, **kwargs):
+        self.service = None
         self.dataset = None
 
-        super(GetImageView, self).__init__(*args, **kwargs)
+        super(GetImageViewBase, self).__init__(*args, **kwargs)
 
     def _open_dataset(self, service):
         """Opens and returns the NetCDF dataset associated with a service, or returns a previously-opened dataset"""
@@ -52,13 +55,33 @@ class GetImageView(View):
         """
         This method should be implemented by the interface view class to process an incoming request and return a list
         of RenderConfiguration objects (one per variable to render). When rendering multiple variables, the first
-        variable in the returned list will be place at the bottom of the final image.
+        variable in the returned list will be placed at the top of the final image.
         """
 
         raise NotImplementedError
 
-    def create_response(self, request, image):
+    def get_service_name(self, request, *args, **kwargs):
+        """
+        This method should be implemented by the interface view class to return the service name based on the request
+        and URL parameters (provided as args and kwargs.
+        """
+
+        raise NotImplementedError
+
+    def format_image(self, image, image_format):
+        """Returns an image in the request format"""
+
+        if image_format in ('png', 'jpg', 'jpeg', 'gif', 'bmp'):
+            buffer = six.StringIO()
+            image.save(buffer, image_format)
+            return buffer.getvalue(), "image/{}".format(image_format)
+        else:
+            raise ValueError('Unsupported format: {}'.format(image_format))
+
+    def create_response(self, request, image, mimetype):
         """Returns a response object for the given image. Can be overridden to return different responses."""
+
+        return HttpResponse(content=image, mimetype=mimetype)
 
     def get_full_extent_image(self, config):
         if CACHE_FULL_EXTENT:
@@ -132,8 +155,9 @@ class GetImageView(View):
             extent = None
             size = None
             background_color = None
+            image_format = None
 
-            for config in self.get_render_configurations(request, **kwargs):
+            for config in reversed(self.get_render_configurations(request, **kwargs)):
                 image = self.get_full_extent_image(config)
 
                 if full_extent_image:
@@ -143,17 +167,26 @@ class GetImageView(View):
                     extent = config.extent
                     size = config.size
                     background_color = config.background_color
+                    image_format = config.image_format
 
             final_image = Image.new('RGBA', size, background_color)
             full_extent_image = GeoImage(full_extent_image, configurations[0].variable)
             final_image.paste(full_extent_image.warp(extent, size), None)
+            final_image, mimetype = self.format_image(final_image, image_format)
 
-            return self.create_response(request, final_image)
+            return self.create_response(request, final_image, mimetype)
+
         except ConfigurationError:
-            return HttpResponseBadRequest
+            return HttpResponseBadRequest()
+        finally:
+            self._close_dataset()
+
+    def dispatch(self, request, *args, **kwargs):
+        self.service = get_object_or_404(Service, name=self.get_service_name(request, *args, **kwargs))
+        return super(GetImageViewBase, self).dispatch(request, *args, **kwargs)
 
     def get(self, request, *args, **kwargs):
-        return self.handle_request(request, *request.GET)
+        return self.handle_request(request, **request.GET.copy())
 
     def post(self, request, *args, **kwargs):
-        return self.handle_request(request, *request.POST)
+        return self.handle_request(request, **request.POST.copy())
