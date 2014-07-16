@@ -101,7 +101,7 @@ class GetImageViewBase(View):
             cache.set(FULL_EXTENT_PENDING_KEY.format(hash=config.hash), True)
 
         try:
-            v = self.dataset.variables[config.variable.name]
+            v = self._open_dataset(self.service).variables[config.variable.name]
             variable = config.variable
             service = variable.service
             time_enabled = service.supports_time and variable.supports_time
@@ -133,7 +133,7 @@ class GetImageViewBase(View):
             image = config.renderer.render_image(data, row_major_order=row_major_order)
 
             #  If y values are increasing, the rendered image needs to be flipped vertically
-            y_variable = self.dataset.variables.get(service.y_dimension)
+            y_variable = self._open_dataset(self.service).variables.get(service.y_dimension)
             if y_variable and y_variable[1] > y_variable[0]:
                 image = image.transpose(Image.FLIP_TOP_BOTTOM)
 
@@ -142,6 +142,7 @@ class GetImageViewBase(View):
 
             return image
         finally:
+            self._close_dataset()
             if CACHE_FULL_EXTENT:
                 cache.delete(FULL_EXTENT_PENDING_KEY.format(hash=config))
 
@@ -186,7 +187,7 @@ class GetImageViewBase(View):
         return super(GetImageViewBase, self).dispatch(request, *args, **kwargs)
 
     def get(self, request, *args, **kwargs):
-        return self.handle_request(request, **request.GET.copy())
+        return self.handle_request(request, **request.GET.dict())
 
     def post(self, request, *args, **kwargs):
-        return self.handle_request(request, **request.POST.copy())
+        return self.handle_request(request, **request.POST.dict())

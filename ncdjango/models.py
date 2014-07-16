@@ -32,7 +32,7 @@ class Service(models.Model):
 
     name = models.CharField(max_length=256, db_index=True)
     description = models.TextField(null=True)
-    data_path = models.FilePathField(SERVICE_DATA_ROOT)
+    data_path = models.FilePathField(SERVICE_DATA_ROOT, recursive=True)
     projection = models.TextField()  # PROJ4 definition
     full_extent = BoundingBoxField()
     initial_extent = BoundingBoxField()

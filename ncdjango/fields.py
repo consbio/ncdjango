@@ -9,6 +9,7 @@ from django.core.exceptions import ValidationError
 from django.db import models
 from django.utils.six import with_metaclass
 from django.utils.translation import ugettext_lazy as _
+import pyproj
 
 
 class BoundingBoxField(with_metaclass(models.SubfieldBase, models.TextField)):
@@ -20,7 +21,11 @@ class BoundingBoxField(with_metaclass(models.SubfieldBase, models.TextField)):
 
         try:
             data = json.loads(value)
-            return BBox((data['xmin'], data['ymin'], data['xmax'], data['ymax']), projection=data.get('proj4'))
+            projection = pyproj.Proj(data.get('proj4')) if 'proj4' in data else None
+
+            return BBox(
+                (data['xmin'], data['ymin'], data['xmax'], data['ymax']), projection=projection
+            )
         except (ValueError, KeyError):
             raise ValidationError("")
 
@@ -49,15 +54,15 @@ class RasterRendererField(with_metaclass(models.SubfieldBase, models.TextField))
             name = data['name']
             kwargs = {
                 'colormap': [(c[0], Color(*c[1])) for c in data['colormap']],
-                'fill_value': data['fill_value'],
+                'fill_value': data.get('fill_value'),
                 'background_color': data.get('background_color')
             }
 
             if name == "stretched":
                 cls = StretchedRenderer
                 kwargs.update({
-                    'method': data['method'],
-                    'colorspace': data['colorspace']
+                    'method': data.get('method', 'linear'),
+                    'colorspace': data.get('colorspace', 'hsv')
                 })
             elif name == "classified":
                 cls = ClassifiedRenderer

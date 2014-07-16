@@ -1,6 +1,7 @@
 from PIL import Image
 from clover.utilities.color import Color
 from django.conf import settings
+import pyproj
 from ncdjango.config import RenderConfiguration
 from ncdjango.exceptions import ConfigurationError
 from ncdjango.interfaces.arcgis.forms import GetImageForm
@@ -23,10 +24,10 @@ class GetImageView(GetImageViewBase):
         return {
             'response_format': 'html',
             'bbox': self.service.full_extent,
-            'size': (400, 400),
+            'size': '400,400',
             'dpi': 200,
-            'image_projection': self.service.projection,
-            'bbox_projection': self.service.projection,
+            'image_projection': pyproj.Proj(self.service.projection),
+            'bbox_projection': pyproj.Proj(self.service.projection),
             'image_format': 'png',
             'transparent': True
         }
@@ -52,7 +53,8 @@ class GetImageView(GetImageViewBase):
     def get_render_configurations(self, request, **kwargs):
         """Render image interface"""
 
-        form_params = self._get_form_defaults().update(GetImageForm.map_parameters(kwargs))
+        form_params = self._get_form_defaults()
+        form_params.update(GetImageForm.map_parameters(kwargs))
         form = GetImageForm(form_params)
         if form.is_valid():
             data = form.cleaned_data
@@ -67,6 +69,7 @@ class GetImageView(GetImageViewBase):
             'background_color': TRANSPARENT_BACKGROUND_COLOR if data.get('transparent') else DEFAULT_BACKGROUND_COLOR
         }
 
+        time_value = None
         if data.get('time'):
             time_value = data['time']
             # Only single time values are supported. For extents, just grab the first value
@@ -84,4 +87,7 @@ class GetImageView(GetImageViewBase):
             configurations = []  # TODO
 
         for config in configurations:
-            config.set_time_index_from_datetime(time_value, best_fit=ALLOW_BEST_FIT_TIME_INDEX)
+            if time_value:
+                config.set_time_index_from_datetime(time_value, best_fit=ALLOW_BEST_FIT_TIME_INDEX)
+
+        return configurations
