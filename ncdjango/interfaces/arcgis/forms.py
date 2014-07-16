@@ -53,7 +53,7 @@ class GetImageForm(forms.Form):
     gdb_version = forms.CharField(required=False)  # Unused
     map_scale = forms.FloatField(required=False)  # Unused
 
-    def clean_size(self, value):
+    def clean_size(self):
         data = self.cleaned_data['size']
         try:
             width, height = [int(x) for x in data.split(',')]
