@@ -1,3 +1,4 @@
+import os
 from PIL import Image
 from django.conf import settings
 from django.core.cache import get_cache
@@ -10,7 +11,7 @@ import numpy
 import six
 from ncdjango.exceptions import ConfigurationError
 from ncdjango.geoimage import GeoImage
-from ncdjango.models import Service
+from ncdjango.models import Service, SERVICE_DATA_ROOT
 
 CACHE_FULL_EXTENT = getattr(settings, 'NC_CACHE_FULL_EXTENT', False)
 FULL_EXTENT_CACHE = getattr(settings, 'NC_FULL_EXTENT_CACHE', 'default')
@@ -35,7 +36,8 @@ class GetImageViewBase(View):
         """Opens and returns the NetCDF dataset associated with a service, or returns a previously-opened dataset"""
 
         if not self.dataset:
-            self.dataset = netCDF4.Dataset(service.data_path, 'r')
+            path = os.path.join(SERVICE_DATA_ROOT, service.data_path)
+            self.dataset = netCDF4.Dataset(path, 'r')
         return self.dataset
 
     def _close_dataset(self):
@@ -72,16 +74,16 @@ class GetImageViewBase(View):
         """Returns an image in the request format"""
 
         if image_format in ('png', 'jpg', 'jpeg', 'gif', 'bmp'):
-            buffer = six.StringIO()
+            buffer = six.BytesIO()
             image.save(buffer, image_format)
             return buffer.getvalue(), "image/{}".format(image_format)
         else:
             raise ValueError('Unsupported format: {}'.format(image_format))
 
-    def create_response(self, request, image, mimetype):
+    def create_response(self, request, image, content_type):
         """Returns a response object for the given image. Can be overridden to return different responses."""
 
-        return HttpResponse(content=image, mimetype=mimetype)
+        return HttpResponse(content=image, content_type=content_type)
 
     def get_full_extent_image(self, config):
         if CACHE_FULL_EXTENT:
@@ -123,7 +125,7 @@ class GetImageViewBase(View):
             transpose_args = [dimensions.index(service.y_dimension), dimensions.index(service.x_dimension)]
             if time_enabled:
                 transpose_args.append(dimensions.index(service.time_dimension))
-                data = data.transpose(*transpose_args)[:, :, config.time_index]
+                data = data.transpose(*transpose_args)[:, :, config.time_index or 0]
             else:
                 data = data.transpose(*transpose_args)
 
@@ -170,12 +172,12 @@ class GetImageViewBase(View):
                     background_color = config.background_color
                     image_format = config.image_format
 
-            final_image = Image.new('RGBA', size, background_color)
-            full_extent_image = GeoImage(full_extent_image, configurations[0].variable)
-            final_image.paste(full_extent_image.warp(extent, size), None)
-            final_image, mimetype = self.format_image(final_image, image_format)
+            final_image = Image.new('RGBA', size, background_color.to_tuple())
+            full_extent_image = GeoImage(full_extent_image, configurations[0].variable.full_extent)
+            final_image.paste(full_extent_image.warp(extent, size).image, None)
+            final_image, content_type = self.format_image(final_image, image_format)
 
-            return self.create_response(request, final_image, mimetype)
+            return self.create_response(request, final_image, content_type)
 
         except ConfigurationError:
             return HttpResponseBadRequest()

@@ -63,7 +63,7 @@ class GetImageView(GetImageViewBase):
 
         variable_set = self.service.variable_set.order_by('index')
         config_params = {
-            'bbox': data['bbox'],
+            'extent': data['bbox'],
             'size': data['size'],
             'image_format': data['image_format'],
             'background_color': TRANSPARENT_BACKGROUND_COLOR if data.get('transparent') else DEFAULT_BACKGROUND_COLOR

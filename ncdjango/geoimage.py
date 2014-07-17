@@ -22,8 +22,8 @@ class GeoImage(object):
         source_bbox = self.bbox.project(target_bbox.projection)
 
         mesh_bounds = []
-        mesh_bounds.extend(to_target_image(*source_bbox.upperLeft))
-        mesh_bounds.extend(to_target_image(*source_bbox.lowerRight))
+        mesh_bounds.extend(to_target_image(*(source_bbox.xmin, source_bbox.ymax)))
+        mesh_bounds.extend(to_target_image(*(source_bbox.xmax, source_bbox.ymin)))
 
         mesh_bounds = [
             max(mesh_bounds[0], 0),
@@ -110,8 +110,8 @@ class GeoImage(object):
         # If target and source projections are the same, perform a simple resize
         elif self.bbox.projection.srs == target_bbox.projection.srs:
             to_source_image = world_to_image(self.bbox, self.image.size)
-            upper_left = to_source_image(*target_bbox.upperLeft)
-            lower_right = to_source_image(*target_bbox.lowerRight)
+            upper_left = to_source_image(*(target_bbox.xmin, target_bbox.ymax))
+            lower_right = to_source_image(*(target_bbox.xmax, target_bbox.ymin))
 
             new_image = self.image.transform(
                 target_size, Image.EXTENT, (upper_left[0], upper_left[1], lower_right[0], lower_right[1]),
