@@ -4,6 +4,7 @@ from clover.geometry.bbox import BBox
 from django import forms
 from django.core.exceptions import ValidationError
 import pyproj
+from ncdjango.interfaces.arcgis.wkid import wkid_to_proj
 from ncdjango.utils import proj4_to_epsg
 
 
@@ -47,6 +48,8 @@ class SrField(forms.Field):
             # Well-known ids below 32767 have a corresponding EPSG
             if wkid < 32767:
                 return pyproj.Proj("+init=epsg:{}".format(wkid))
+            elif wkid in wkid_to_proj:
+                return pyproj.Proj(wkid_to_proj[wkid])
             else:
                 raise RuntimeError
         except ValueError:

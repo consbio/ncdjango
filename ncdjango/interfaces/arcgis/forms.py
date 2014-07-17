@@ -69,6 +69,7 @@ class GetImageForm(forms.Form):
 
         if bbox and bbox_projection:
             bbox.projection = bbox_projection
+            cleaned_data['bbox'] = bbox.project(cleaned_data['image_projection'])
 
         return cleaned_data
 
@@ -78,5 +79,5 @@ class GetImageForm(forms.Form):
 
         d = {}
         for k, v in six.iteritems(params):
-            d[cls.FIELD_MAP.get(k, k)] = v
+            d[cls.FIELD_MAP.get(k.lower(), k)] = v
         return d
