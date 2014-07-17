@@ -1,5 +1,6 @@
 import os
 from PIL import Image
+from clover.geometry.bbox import BBox
 from django.conf import settings
 from django.core.cache import get_cache
 from django.http.response import HttpResponseBadRequest, HttpResponse
@@ -52,6 +53,22 @@ class GetImageViewBase(View):
 
     def _cache_to_image(self, bytes):
         return Image.open(six.StringIO(bytes))
+
+    def _normalize_bbox(self, bbox, size):
+        """Returns this bbox normalized to match the ratio of the given size."""
+
+        bbox_ratio = float(bbox.width) / float(bbox.height)
+        size_ratio = float(size[0]) / float(size[1])
+
+        if round(size_ratio, 4) == round(bbox_ratio, 4):
+            return bbox
+        else:
+            if bbox.height * size_ratio >= bbox.width:
+                diff = bbox.height*size_ratio - bbox.width
+                return BBox((bbox.xmin - diff/2, bbox.ymin, bbox.xmax + diff/2, bbox.ymax), bbox.projection)
+            else:
+                diff = abs(bbox.width/size_ratio - bbox.height)
+                return BBox((bbox.xmin, bbox.ymin - diff/2, bbox.xmax, bbox.ymax + diff/2), bbox.projection)
 
     def get_render_configurations(self, request, **kwargs):
         """
@@ -167,7 +184,7 @@ class GetImageViewBase(View):
                     full_extent_image.paste(image, None)
                 else:
                     full_extent_image = image
-                    extent = config.extent
+                    extent = self._normalize_bbox(config.extent, config.size)
                     size = config.size
                     background_color = config.background_color
                     image_format = config.image_format
