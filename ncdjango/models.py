@@ -62,13 +62,18 @@ class Service(models.Model):
 
             if units in ('years', 'decades', 'centuries'):
                 if units == 'years':
-                    years = 1
+                    years = interval
                 elif units == 'decades':
-                    years = 10
+                    years = 10 * interval
                 else:
-                    years = 100
+                    years = 100 * interval
 
                 next_value = lambda x: x.replace(year=x.year + years)
+            elif units == 'months':
+                next_value = lambda x: x.replace(
+                    year=x.year + (x.month+interval-1) // 12,
+                    month=(x.month+interval) % 12 or 12
+                )
             else:
                 if units == 'milliseconds':
                     delta = timedelta(milliseconds=interval)
@@ -82,8 +87,6 @@ class Service(models.Model):
                     delta = timedelta(days=interval)
                 elif units == 'weeks':
                     delta = timedelta(weeks=interval)
-                elif units == 'months':
-                    delta = timedelta(months=interval)
                 else:
                     raise ValidationError(
                         "Service has an invalid time_interval_units: {}".format(self.time_interval_units)
@@ -121,6 +124,7 @@ class Variable(models.Model):
     index = models.PositiveIntegerField()
     variable = models.CharField(max_length=256)
     name = models.CharField(max_length=256)
+    description = models.TextField(null=True)
     renderer = RasterRendererField()
     full_extent = BoundingBoxField()
     supports_time = models.BooleanField(default=False)

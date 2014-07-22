@@ -3,14 +3,15 @@ from PIL import Image
 from clover.utilities.color import Color
 from django.conf import settings
 from django.http import HttpResponse
+from django.shortcuts import get_object_or_404
 from django.views.generic.detail import DetailView
 from django.views.generic.list import ListView
 import pyproj
 from ncdjango.config import RenderConfiguration
 from ncdjango.exceptions import ConfigurationError
 from ncdjango.interfaces.arcgis.forms import GetImageForm
-from ncdjango.interfaces.arcgis.utils import date_to_timestamp
-from ncdjango.models import Service
+from ncdjango.interfaces.arcgis.utils import date_to_timestamp, extent_to_envelope
+from ncdjango.models import Service, Variable
 from ncdjango.utils import proj4_to_epsg
 from ncdjango.views import GetImageViewBase
 
@@ -34,7 +35,7 @@ TIME_UNITS_MAP = {
 }
 
 
-class CatalogView(ListView):
+class MapServiceListView(ListView):
     model = Service
 
     def render_to_response(self, context, **response_kwargs):
@@ -44,20 +45,15 @@ class CatalogView(ListView):
             'services': [{'name': s.name, 'type': 'MapServer'} for s in self.object_list.all()]
         }
 
-        return HttpResponse(json.dumps(data), content_type="application/json")
+        return HttpResponse(json.dumps(data), content_type='application/json')
 
 
-class MapServiceView(DetailView):
+class MapServiceDetailView(DetailView):
     model = Service
     slug_field = 'name'
     slug_url_kwarg = 'service_name'
 
     def render_to_response(self, context, **response_kwargs):
-        def extent_to_envelope(extent, wkid):
-            extent = {k: getattr(extent, k) for k in ('xmin', 'ymin', 'xmax', 'ymax')}
-            extent['wkid'] = wkid
-            return extent
-
         epsg = proj4_to_epsg(pyproj.Proj(self.object.projection))
         if epsg:
             full_extent = self.object.full_extent
@@ -104,7 +100,86 @@ class MapServiceView(DetailView):
                 'hasLiveData': False
             }
 
+        return HttpResponse(json.dumps(data), content_type='application/json')
+
+
+class LayerListView(ListView):
+    model = Variable
+
+    def get_queryset(self):
+        queryset = super(LayerListView, self).get_queryset()
+        return queryset.filter(service__name=self.kwargs.get('service_name'))
+
+    def render_to_response(self, context, **response_kwargs):
+        data = {
+            'layers': [LayerDetailView.get_layer_data(v) for v in self.object_list.all()]
+        }
+
         return HttpResponse(json.dumps(data), content_type="application/json")
+
+
+class LayerDetailView(DetailView):
+    model = Variable
+
+    def get_object(self, queryset=None):
+        queryset = queryset or self.get_queryset()
+        service_name = self.kwargs.get('service_name')
+        layer_index = self.kwargs.get('layer_index')
+
+        return get_object_or_404(queryset, service__name=service_name, index=layer_index)
+
+    @staticmethod
+    def get_layer_data(variable):
+        epsg = proj4_to_epsg(variable.full_extent.projection)
+        if epsg:
+            full_extent = variable.full_extent
+        else:
+            epsg = 102100
+            projection = pyproj.Proj('+units=m +init=epsg:3857')
+            full_extent = variable.full_extent.project(projection)
+
+        data = {
+            'id': variable.index,
+            'name': variable.name,
+            'type': 'Raster Layer',
+            'description': variable.description,
+            'geometryType': None,
+            'hasZ': False,
+            'hasM': False,
+            'copyrightText': None,
+            'parentLayer': -1,
+            'subLayers': None,
+            'minScale': 0,
+            'maxScale': 0,
+            'defaultVisibility': True,
+            'extent': extent_to_envelope(full_extent, epsg),
+            'displayField': variable.variable,
+            'maxRecordCount': 1000,
+            'supportsStatistics': False,
+            'supportsAdvancedQueries': False,
+            'capabilities': 'Map,Query',
+            'supportedQueryFormats': 'JSON',
+            'isDataVersioned': False
+        }
+
+        if variable.supports_time:
+            data['timeInfo'] = {
+                'timeExtent': [date_to_timestamp(variable.time_start), date_to_timestamp(variable.time_end)],
+                'timeInterval': variable.service.time_interval,
+                'timeIntervalUnits': TIME_UNITS_MAP.get(variable.service.time_interval_units),
+                'exportOptions': {
+                    'useTime': True,
+                    'timeDataCumulative': False
+                },
+                'hasLiveData': False
+            }
+
+        return data
+
+    def render_to_response(self, context, **response_kwargs):
+        data = {'currentVersion': '10.1'}
+        data.update(self.get_layer_data(self.object))
+        return HttpResponse(json.dumps(data), content_type='application/json')
 
 
 class GetImageView(GetImageViewBase):
