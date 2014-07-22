@@ -102,6 +102,11 @@ class GeoImage(object):
             src_bbox = target_bbox.project(self.bbox.projection)
             target_size = (int(round(src_bbox.width*px_per_unit[0])), int(round(src_bbox.height*px_per_unit[1])))
 
+        canvas_size = (
+            max(target_size[0], self.image.size[0]),
+            max(target_size[1], self.image.size[1])
+        )
+
         # If target and source bounds are the same and source and target sizes are the same, return a reference to
         # this image.
         if self.bbox == target_bbox and self.image.size == target_size:
@@ -113,17 +118,15 @@ class GeoImage(object):
             upper_left = to_source_image(*(target_bbox.xmin, target_bbox.ymax))
             lower_right = to_source_image(*(target_bbox.xmax, target_bbox.ymin))
 
-            new_image = self.image.transform(
+            im = Image.new("RGBA", canvas_size, (0, 0, 0, 0))
+            im.paste(self.image, (0, 0))
+            new_image = im.transform(
                 target_size, Image.EXTENT, (upper_left[0], upper_left[1], lower_right[0], lower_right[1]),
                 Image.NEAREST
             )
 
         # Full warp
         else:
-            canvas_size = (
-                max(target_size[0], self.image.size[0]),
-                max(target_size[1], self.image.size[1])
-            )
             im = Image.new("RGBA", canvas_size, (0, 0, 0, 0))
             im.paste(self.image, (0, 0))
             new_image = im.transform(
