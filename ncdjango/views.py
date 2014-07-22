@@ -47,12 +47,12 @@ class GetImageViewBase(View):
             self.dataset = None
 
     def _image_to_cache(self, image):
-        buffer = six.StringIO()
+        buffer = six.BytesIO()
         image.save(buffer, "png")
         return buffer.getvalue()
 
     def _cache_to_image(self, bytes):
-        return Image.open(six.StringIO(bytes))
+        return Image.open(six.BytesIO(bytes))
 
     def _normalize_bbox(self, bbox, size):
         """Returns this bbox normalized to match the ratio of the given size."""
@@ -107,7 +107,7 @@ class GetImageViewBase(View):
             cache = get_cache(FULL_EXTENT_CACHE)
             cache_wait_start = time.time()
 
-            while time.time() - cache_wait_start > FULL_EXTENT_CACHE_TIMEOUT:
+            while time.time() - cache_wait_start < FULL_EXTENT_CACHE_TIMEOUT:
                 image = cache.get(FULL_EXTENT_CACHE_KEY.format(hash=config.hash))
                 if image:
                     return self._cache_to_image(image)  # The full extent has already been rendered
@@ -116,7 +116,6 @@ class GetImageViewBase(View):
                     continue
                 else:
                     break  # No full extent and no render pending
-
             cache.set(FULL_EXTENT_PENDING_KEY.format(hash=config.hash), True)
 
         try:
@@ -163,7 +162,7 @@ class GetImageViewBase(View):
         finally:
             self._close_dataset()
             if CACHE_FULL_EXTENT:
-                cache.delete(FULL_EXTENT_PENDING_KEY.format(hash=config))
+                cache.delete(FULL_EXTENT_PENDING_KEY.format(hash=config.hash))
 
     def handle_request(self, request, **kwargs):
         try:

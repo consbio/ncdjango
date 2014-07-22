@@ -4,6 +4,7 @@ from clover.geometry.bbox import BBox
 from django import forms
 from django.core.exceptions import ValidationError
 import pyproj
+from ncdjango.interfaces.arcgis.utils import timestamp_to_date, date_to_timestamp
 from ncdjango.interfaces.arcgis.wkid import wkid_to_proj
 from ncdjango.utils import proj4_to_epsg
 
@@ -75,9 +76,6 @@ class TimeField(forms.Field):
         if not value or isinstance(value, [datetime, tuple, list]):
             return value
 
-        def timestamp_to_date(timestamp):
-            return datetime.utcfromtimestamp(0)+timedelta(seconds=int(timestamp / 1000))
-
         try:
             if ',' in value:
                 return tuple([timestamp_to_date(int(x)) for x in value.split(',')])
@@ -89,9 +87,6 @@ class TimeField(forms.Field):
     def prepare_value(self, value):
         if not value:
             return value
-
-        def date_to_timestamp(timestamp):
-            return int((timestamp - datetime.utcfromtimestamp(0)).total_seconds() * 1000)
 
         if isinstance(value, [tuple, list]):
             return ",".join([str(date_to_timestamp(x)) for x in value])

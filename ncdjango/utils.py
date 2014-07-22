@@ -53,7 +53,7 @@ def proj4_to_epsg(projection):
         return int(match.group(1))
 
     # Otherwise, try to look up the EPSG from the pyproj data file
-    pyproj_data_dir = os.path.join(os.dirname(pyproj.__file__), 'data')
+    pyproj_data_dir = os.path.join(os.path.dirname(pyproj.__file__), 'data')
     pyproj_epsg_file = os.path.join(pyproj_data_dir, 'epsg')
     if os.path.exists(pyproj_epsg_file):
         definition = make_definition(projection.srs)
