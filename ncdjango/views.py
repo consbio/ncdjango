@@ -1,6 +1,7 @@
 import os
 from PIL import Image
 from clover.geometry.bbox import BBox
+from clover.geometry.mask import mask_from_geometry
 from django.conf import settings
 from django.core.cache import get_cache
 from django.http.response import HttpResponseBadRequest, HttpResponse
@@ -9,10 +10,13 @@ from django.views.generic import View
 import time
 import netCDF4
 import numpy
+import pyproj
+from shapely.geometry import Point
 import six
 from ncdjango.exceptions import ConfigurationError
 from ncdjango.geoimage import GeoImage
 from ncdjango.models import Service, SERVICE_DATA_ROOT
+from ncdjango.utils import project_geometry, proj4_to_wkt
 
 CACHE_FULL_EXTENT = getattr(settings, 'NC_CACHE_FULL_EXTENT', False)
 FULL_EXTENT_CACHE = getattr(settings, 'NC_FULL_EXTENT_CACHE', 'default')
@@ -22,18 +26,36 @@ FULL_EXTENT_CACHE_KEY = "ncdjango_full_extent_{hash}"
 FULL_EXTENT_PENDING_KEY = "ncdjango_full_extent_pending_{hash}"
 
 
-class GetImageViewBase(View):
-    """Base view for handling image render requests. This view is implemented by specific interfaces."""
+class ServiceView(View):
+    """Base view for map service requests"""
 
     http_method_names = ['get', 'post', 'head', 'options']
 
     def __init__(self, *args, **kwargs):
         self.service = None
+
+        super(ServiceView, self).__init__(*args, **kwargs)
+
+    def dispatch(self, request, *args, **kwargs):
+        self.service = get_object_or_404(Service, name=self.get_service_name(request, *args, **kwargs))
+        return super(ServiceView, self).dispatch(request, *args, **kwargs)
+
+    def get(self, request, *args, **kwargs):
+        return self.handle_request(request, **request.GET.dict())
+
+    def post(self, request, *args, **kwargs):
+        return self.handle_request(request, **request.POST.dict())
+
+
+class NetCdfDatasetMixin(object):
+    """View mixin for handling NetCDF datasets"""
+
+    def __init__(self, *args, **kwargs):
         self.dataset = None
 
-        super(GetImageViewBase, self).__init__(*args, **kwargs)
+        super(NetCdfDatasetMixin, self).__init__(*args, **kwargs)
 
-    def _open_dataset(self, service):
+    def open_dataset(self, service):
         """Opens and returns the NetCDF dataset associated with a service, or returns a previously-opened dataset"""
 
         if not self.dataset:
@@ -41,10 +63,47 @@ class GetImageViewBase(View):
             self.dataset = netCDF4.Dataset(path, 'r')
         return self.dataset
 
-    def _close_dataset(self):
+    def close_dataset(self):
         if self.dataset:
             self.dataset.close()
             self.dataset = None
+
+    def get_grid_for_variable(self, variable_id, time_index=None):
+        variable = self.open_dataset(self.service).variables[variable_id]
+        data = variable[:]
+
+        valid_dimensions = (self.service.y_dimension, self.service.x_dimension)
+        if time_index is not None:
+            valid_dimensions = (self.service.time_dimension,) + valid_dimensions
+
+        dimensions = list(variable.dimensions)
+        for dimension in variable.dimensions:
+            if not dimension in valid_dimensions:
+                data = numpy.rollaxis(data, dimensions.index(dimension))[0]
+                dimensions.remove(dimension)
+
+        transpose_args = [dimensions.index(self.service.y_dimension), dimensions.index(self.service.x_dimension)]
+        if time_index is not None:
+            transpose_args.append(dimensions.index(self.service.time_dimension))
+            data = data.transpose(*transpose_args)[:, :, time_index]
+        else:
+            data = data.transpose(*transpose_args)
+
+        return data
+
+    def is_row_major(self, variable_id):
+        variable = self.open_dataset(self.service).variables[variable_id]
+        return (
+            variable.dimensions.index(self.service.y_dimension) < variable.dimensions.index(self.service.x_dimension)
+        )
+
+    def is_y_increasing(self):
+        y_variable = self.open_dataset(self.service).variables.get(self.service.y_dimension)
+        return y_variable and y_variable[1] > y_variable[0]
+
+
+class GetImageViewBase(NetCdfDatasetMixin, ServiceView):
+    """Base view for handling image render requests. This view is implemented by specific interfaces."""
 
     def _image_to_cache(self, image):
         buffer = six.BytesIO()
@@ -119,40 +178,23 @@ class GetImageViewBase(View):
             cache.set(FULL_EXTENT_PENDING_KEY.format(hash=config.hash), True)
 
         try:
-            v = self._open_dataset(self.service).variables[config.variable.name]
             variable = config.variable
             service = variable.service
-            time_enabled = service.supports_time and variable.supports_time
-            data = v[:]
-            row_major_order = (
-                v.dimensions.index(service.y_dimension) < v.dimensions.index(service.x_dimension)
-            )
 
-            valid_dimensions = (service.y_dimension, service.x_dimension)
-            if time_enabled:
-                valid_dimensions = (service.time_dimension,) + valid_dimensions
-
-            dimensions = list(v.dimensions)
-            for dimension in v.dimensions:
-                if not dimension in valid_dimensions:
-                    data = numpy.rollaxis(data, dimensions.index(dimension))[0]
-                    dimensions.remove(dimension)
-
-            transpose_args = [dimensions.index(service.y_dimension), dimensions.index(service.x_dimension)]
-            if time_enabled:
-                transpose_args.append(dimensions.index(service.time_dimension))
-                data = data.transpose(*transpose_args)[:, :, config.time_index or 0]
+            if service.supports_time and variable.supports_time:
+                time_index = config.time_index or 0
             else:
-                data = data.transpose(*transpose_args)
+                time_index = None
+
+            data = self.get_grid_for_variable(variable.variable, time_index=time_index)
 
             if hasattr(data, 'fill_value'):
                 config.renderer.fill_value = data.fill_value
 
-            image = config.renderer.render_image(data, row_major_order=row_major_order)
+            image = config.renderer.render_image(data, row_major_order=self.is_row_major(variable.variable))
 
             #  If y values are increasing, the rendered image needs to be flipped vertically
-            y_variable = self._open_dataset(self.service).variables.get(service.y_dimension)
-            if y_variable and y_variable[1] > y_variable[0]:
+            if self.is_y_increasing():
                 image = image.transpose(Image.FLIP_TOP_BOTTOM)
 
             if CACHE_FULL_EXTENT:
@@ -160,7 +202,7 @@ class GetImageViewBase(View):
 
             return image
         finally:
-            self._close_dataset()
+            self.close_dataset()
             if CACHE_FULL_EXTENT:
                 cache.delete(FULL_EXTENT_PENDING_KEY.format(hash=config.hash))
 
@@ -176,7 +218,7 @@ class GetImageViewBase(View):
             background_color = None
             image_format = None
 
-            for config in reversed(self.get_render_configurations(request, **kwargs)):
+            for config in reversed(configurations):
                 image = self.get_full_extent_image(config)
 
                 if full_extent_image:
@@ -198,14 +240,81 @@ class GetImageViewBase(View):
         except ConfigurationError:
             return HttpResponseBadRequest()
         finally:
-            self._close_dataset()
+            self.close_dataset()
 
-    def dispatch(self, request, *args, **kwargs):
-        self.service = get_object_or_404(Service, name=self.get_service_name(request, *args, **kwargs))
-        return super(GetImageViewBase, self).dispatch(request, *args, **kwargs)
 
-    def get(self, request, *args, **kwargs):
-        return self.handle_request(request, **request.GET.dict())
+class IdentifyViewBase(NetCdfDatasetMixin, ServiceView):
+    """Base view for handling identify requests. This view is implemented by specific interfaces."""
 
-    def post(self, request, *args, **kwargs):
-        return self.handle_request(request, **request.POST.dict())
+    def serialize_data(self, data):
+        """
+        Implemented by interface class to serialize identify results. Should return serialized data and
+        content MIME type.
+        """
+
+        raise NotImplementedError
+
+    def get_identify_configurations(self, request, **kwargs):
+        """
+        This method should be implemented by the interface view class to process an incoming request and return a list
+        of IdentifyConfiguration objects (one per variable to identify).
+        """
+
+        raise NotImplementedError
+
+    def get_service_name(self, request, *args, **kwargs):
+        """
+        This method should be implemented by the interface view class to return the service name based on the request
+        and URL parameters (provided as args and kwargs.
+        """
+
+        raise NotImplementedError
+
+    def create_response(self, request, content, content_type):
+        """Returns a response object for the request. Can be overridden to return different responses."""
+
+        return HttpResponse(content=content, content_type=content_type)
+
+    def handle_request(self, request, **kwargs):
+        try:
+            configurations = self.get_identify_configurations(request, **kwargs)
+            if not configurations:
+                return HttpResponse()
+
+            data = {}
+
+            for config in configurations:
+                variable = config.variable
+                service = variable.service
+
+                if service.supports_time and variable.supports_time:
+                    time_index = config.time_index or 0
+                else:
+                    time_index = None
+
+                geometry = project_geometry(config.geometry, config.projection, pyproj.Proj(self.service.projection))
+                assert isinstance(geometry, Point)  # Only point-based identify is supported
+                variable_data = self.get_grid_for_variable(config.variable.variable, time_index=time_index)
+
+                cell_size = (
+                    float(variable.full_extent.width) / variable_data.shape[1],
+                    float(variable.full_extent.height) / variable_data.shape[0]
+                )
+
+                cell_index = [
+                    int(float(geometry.x-variable.full_extent.xmin) / cell_size[0]),
+                    int(float(geometry.y-variable.full_extent.ymin) / cell_size[1])
+                ]
+                if not self.is_y_increasing():
+                    cell_index[1] = variable_data.shape[0] - cell_index[1] - 1
+
+                if variable_data.shape[1] > cell_index[0] >= 0 and variable_data.shape[0] > cell_index[1] >= 0:
+                    data[variable] = float(variable_data[cell_index[1]][cell_index[0]])
+
+            data, content_type = self.serialize_data(data)
+            return self.create_response(request, data, content_type=content_type)
+
+        except ConfigurationError:
+            return HttpResponseBadRequest()
+        finally:
+            self.close_dataset()

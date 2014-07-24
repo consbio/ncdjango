@@ -105,7 +105,6 @@ class Service(models.Model):
             # TODO
             raise NotImplementedError
 
-
     def save(self, *args, **kwargs):
         has_required_time_fields = (
             self.time_dimension and self.time_start and self.time_end and self.time_interval and

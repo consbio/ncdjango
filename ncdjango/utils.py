@@ -1,8 +1,10 @@
 from bisect import bisect_left
-from functools import wraps
+from functools import wraps, partial
 import os
 import re
+import osgeo
 import pyproj
+from shapely.ops import transform
 
 EPSG_RE = re.compile(r'\+init=epsg:([0-9]+)')
 PYPROJ_EPSG_FILE_RE = re.compile(r'<([0-9]+)([^<]+)<')
@@ -65,3 +67,33 @@ def proj4_to_epsg(projection):
                 if definition == file_definition:
                     return int(match.group(1))
     return None
+
+
+def wkt_to_proj4(wkt):
+    """Converts a well-known text string to a pyproj.Proj object"""
+
+    srs = osgeo.osr.SpatialReference()
+    srs.ImportFromWkt(wkt)
+
+    return pyproj.Proj(srs.ExportToProj4())
+
+
+def proj4_to_wkt(projection):
+    """Converts a pyproj.Proj object to a well-known text string"""
+
+    srs = osgeo.osr.SpatialReference()
+    srs.ImportFromProj4(projection.srs)
+
+    return srs.ExportToWkt()
+
+
+def project_geometry(geometry, source, target):
+    """Projects a shapely geometry object from the source to the target projection."""
+
+    project = partial(
+        pyproj.transform,
+        source,
+        target
+    )
+
+    return transform(project, geometry)
