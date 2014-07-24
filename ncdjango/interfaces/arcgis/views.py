@@ -183,7 +183,54 @@ class LayerDetailView(DetailView):
         return data
 
 
-class GetImageView(GetImageViewBase):
+class ArcGisMapServerMixin(object):
+    def process_form_data(self, defaults, data):
+        form_params = defaults
+        form_params.update(self.form_class.map_parameters(data))
+        form = self.form_class(form_params)
+        if form.is_valid():
+            return form.cleaned_data
+        else:
+            raise ConfigurationError
+
+    def get_variable_set(self, variable_set, data):
+        """Filters the given variable set based on request parameters"""
+
+        if data.get('dynamic_layers'):
+            variable_set = []  # TODO
+        elif data.get('layers'):
+            op, layer_ids = data['layers'].split(':', 1)
+            op = op.lower()
+            layer_ids = [int(x) for x in layer_ids.split(',')]
+
+            if op in ('show', 'include'):
+                variable_set = [x for x in variable_set if x.index in layer_ids]
+            elif op in ('hide', 'exclude'):
+                variable_set = [x for x in variable_set if x.index not in layer_ids]
+        elif self.service.render_top_layer_only:
+            variable_set = [variable_set[0]]
+
+        return variable_set
+
+    def apply_time_to_configurations(self, configurations, data):
+        """Applies the correct time index to configurations"""
+
+        time_value = None
+        if data.get('time'):
+            time_value = data['time']
+
+            # Only single time values are supported. For extents, just grab the first value
+            if isinstance(data['time'], [tuple, list]):
+                time_value = time_value[0]
+
+        if time_value:
+            for config in configurations:
+                config.set_time_index_from_datetime(time_value, best_fit=ALLOW_BEST_FIT_TIME_INDEX)
+
+        return configurations
+
+
+class GetImageView(ArcGisMapServerMixin, GetImageViewBase):
     form_class = GetImageForm
 
     def _get_form_defaults(self):
@@ -221,15 +268,9 @@ class GetImageView(GetImageViewBase):
     def get_render_configurations(self, request, **kwargs):
         """Render image interface"""
 
-        form_params = self._get_form_defaults()
-        form_params.update(self.form_class.map_parameters(kwargs))
-        form = self.form_class(form_params)
-        if form.is_valid():
-            data = form.cleaned_data
-        else:
-            raise ConfigurationError
+        data = self.process_form_data(self._get_form_defaults(), kwargs)
+        variable_set = self.get_variable_set(self.service.variable_set.order_by('index'), data)
 
-        variable_set = self.service.variable_set.order_by('index')
         config_params = {
             'extent': data['bbox'],
             'size': data['size'],
@@ -237,38 +278,12 @@ class GetImageView(GetImageViewBase):
             'background_color': TRANSPARENT_BACKGROUND_COLOR if data.get('transparent') else DEFAULT_BACKGROUND_COLOR
         }
 
-        time_value = None
-        if data.get('time'):
-            time_value = data['time']
-
-            # Only single time values are supported. For extents, just grab the first value
-            if isinstance(data['time'], [tuple, list]):
-                time_value = time_value[0]
-
-        if data.get('dynamic_layers'):
-            variable_set = []  # TODO
-        elif data.get('layers'):
-            op, layer_ids = data['layers'].split(':', 1)
-            op = op.lower()
-            layer_ids = [int(x) for x in layer_ids.split(',')]
-
-            if op in ('show', 'include'):
-                variable_set = [x for x in variable_set if x.index in layer_ids]
-            elif op in ('hide', 'exclude'):
-                variable_set = [x for x in variable_set if x.index not in layer_ids]
-        elif self.service.render_top_layer_only:
-            variable_set = [variable_set[0]]
-
-        configurations = [RenderConfiguration(v, **config_params) for v in variable_set]
-
-        for config in configurations:
-            if time_value:
-                config.set_time_index_from_datetime(time_value, best_fit=ALLOW_BEST_FIT_TIME_INDEX)
-
-        return configurations
+        return self.apply_time_to_configurations(
+            [RenderConfiguration(v, **config_params) for v in variable_set], data
+        )
 
 
-class IdentifyView(IdentifyViewBase):
+class IdentifyView(ArcGisMapServerMixin, IdentifyViewBase):
     form_class = IdentifyForm
 
     def _get_form_defaults(self):
@@ -307,44 +322,14 @@ class IdentifyView(IdentifyViewBase):
         return kwargs['service_name']
 
     def get_identify_configurations(self, request, **kwargs):
-        form_params = self._get_form_defaults()
-        form_params.update(self.form_class.map_parameters(kwargs))
-        form = self.form_class(form_params)
-        if form.is_valid():
-            data = form.cleaned_data
-        else:
-            raise ConfigurationError
+        data = self.process_form_data(self._get_form_defaults(), kwargs)
+        variable_set = self.get_variable_set(self.service.variable_set.order_by('index'), data)
 
-        variable_set = self.service.variable_set.order_by('index')
         config_params = {
             'geometry': data['geometry'],
             'projection': data['projection']
         }
 
-        time_value = None
-        if data.get('time'):
-            time_value = data['time']
-
-            # Only single time values are supported. For extents, just grab the first value
-            if isinstance(data['time'], [tuple, list]):
-                time_value = time_value[0]
-
-        if data.get('dynamic_layers'):
-            variable_set = []  # TODO
-        elif data.get('layers'):
-            op, layer_ids = data['layers'].split(':', 1)
-            op = op.lower()
-            layer_ids = [int(x) for x in layer_ids.split(',')]
-
-            if op in ('show', 'include'):
-                variable_set = [x for x in variable_set if x.index in layer_ids]
-            elif op in ('hide', 'exclude'):
-                variable_set = [x for x in variable_set if x.index not in layer_ids]
-
-        configurations = [IdentifyConfiguration(v, **config_params) for v in variable_set]
-
-        for config in configurations:
-            if time_value:
-                config.set_time_index_from_datetime(time_value, best_fit=ALLOW_BEST_FIT_TIME_INDEX)
-
-        return configurations
+        return self.apply_time_to_configurations(
+            [IdentifyConfiguration(v, **config_params) for v in variable_set], data
+        )
