@@ -1,7 +1,7 @@
 from django.conf import settings
 from django.conf.urls import patterns, url, include
-from ncdjango.interfaces.arcgis.views import GetImageView, MapServiceListView, MapServiceDetailView, LayerDetailView, \
-    LayerListView, IdentifyView
+from ncdjango.interfaces.arcgis.views import GetImageView, MapServiceListView, MapServiceDetailView, LayerDetailView
+from ncdjango.interfaces.arcgis.views import LayerListView, IdentifyView
 
 ARCGIS_BASE_URL = getattr(settings, 'NC_ARCGIS_BASE_URL', 'arcgis/rest/')
 

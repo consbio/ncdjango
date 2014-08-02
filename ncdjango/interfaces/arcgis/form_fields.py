@@ -1,4 +1,4 @@
-from datetime import datetime, timedelta
+from datetime import datetime
 import json
 from clover.geometry.bbox import BBox
 from django import forms
