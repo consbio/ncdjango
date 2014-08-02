@@ -3,7 +3,11 @@ from django.conf.urls import patterns
 from django.core.exceptions import ImproperlyConfigured
 from django.utils.importlib import import_module
 
-INSTALLED_INTERFACES = getattr(settings, 'NC_INSTALLED_INTERFACES', ('ncdjango.interfaces.arcgis',))
+DEFAULT_INSTALLED_INTERFACES = (
+    'ncdjango.interfaces.arcgis_extended',
+    'ncdjango.interfaces.arcgis'
+)
+INSTALLED_INTERFACES = getattr(settings, 'NC_INSTALLED_INTERFACES', DEFAULT_INSTALLED_INTERFACES)
 
 
 urlpatterns = patterns('')

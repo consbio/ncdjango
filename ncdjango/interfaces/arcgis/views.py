@@ -184,12 +184,18 @@ class LayerDetailView(DetailView):
 
 
 class ArcGisMapServerMixin(object):
+    def __init__(self, *args, **kwargs):
+        self.form_data = {}
+
+        return super(ArcGisMapServerMixin, self).__init__(*args, **kwargs)
+
     def process_form_data(self, defaults, data):
         form_params = defaults
         form_params.update(self.form_class.map_parameters(data))
         form = self.form_class(form_params)
         if form.is_valid():
-            return form.cleaned_data
+            self.form_data = form.cleaned_data
+            return self.form_data
         else:
             raise ConfigurationError
 
