@@ -315,3 +315,42 @@ class IdentifyViewBase(NetCdfDatasetMixin, ServiceView):
             return HttpResponseBadRequest()
         finally:
             self.close_dataset()
+
+
+class LegendViewBase(NetCdfDatasetMixin, ServiceView):
+    def serialize_data(self, data):
+        """
+        Implemented by interface class to serialize identify results. Should return serialized data and
+        content MIME type.
+        """
+
+        raise NotImplementedError
+
+    def get_legend_configurations(self, request, **kwargs):
+        """
+        This method should be implemented by the interface view class to process an incoming request and return a list
+        of LegendConfiguration objects (one per variable to identify).
+        """
+
+        raise NotImplementedError
+
+    def create_response(self, request, content, content_type):
+        """Returns a response object for the request. Can be overridden to return different responses."""
+
+        return HttpResponse(content=content, content_type=content_type)
+
+    def handle_request(self, request, **kwargs):
+        try:
+            configurations = self.get_legend_configurations(request, **kwargs)
+            if not configurations:
+                return HttpResponse()
+
+            data = {}
+
+            for config in configurations:
+                data[config.variable] = config.renderer.get_legend(*config.size)
+
+            data, content_type = self.serialize_data(data)
+            return self.create_response(request, data,content_type=content_type)
+        finally:
+            self.close_dataset()

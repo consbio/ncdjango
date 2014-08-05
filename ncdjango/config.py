@@ -72,3 +72,13 @@ class IdentifyConfiguration(ConfigurationBase):
 
         self.geometry = geometry
         self.projection = projection
+
+
+class LegendConfiguration(ConfigurationBase):
+    """Properties for a legends request"""
+
+    def __init__(self, variable, renderer=None, size=[]):
+        super(LegendConfiguration, self).__init__(variable)
+
+        self.size = size
+        self.renderer = renderer or variable.renderer
