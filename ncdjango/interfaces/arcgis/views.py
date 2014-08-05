@@ -1,5 +1,8 @@
 import json
 from PIL import Image
+from clover.render.renderers.classified import ClassifiedRenderer
+from clover.render.renderers.legend import LegendElement
+from clover.render.renderers.stretched import StretchedRenderer
 from clover.utilities.color import Color
 from django.conf import settings
 from django.http import HttpResponse
@@ -8,13 +11,13 @@ from django.views.generic.detail import DetailView
 from django.views.generic.list import ListView
 import pyproj
 import six
-from ncdjango.config import RenderConfiguration, IdentifyConfiguration
+from ncdjango.config import RenderConfiguration, IdentifyConfiguration, LegendConfiguration
 from ncdjango.exceptions import ConfigurationError
 from ncdjango.interfaces.arcgis.forms import GetImageForm, IdentifyForm
 from ncdjango.interfaces.arcgis.utils import date_to_timestamp, extent_to_envelope
 from ncdjango.models import Service, Variable
 from ncdjango.utils import proj4_to_epsg
-from ncdjango.views import GetImageViewBase, IdentifyViewBase
+from ncdjango.views import GetImageViewBase, IdentifyViewBase, LegendViewBase
 
 ALLOW_BEST_FIT_TIME_INDEX = getattr(settings, 'NC_ALLOW_BEST_FIT_TIME_INDEX', True)
 
@@ -311,7 +314,7 @@ class IdentifyView(ArcGisMapServerMixin, IdentifyViewBase):
             'results': [
                 {
                     'layerId': variable.index,
-                    'layerName': variable.variable,
+                    'layerName': variable.name,
                     'value': value,
                     'displayFieldName': variable.name,
                     'attributes': {
@@ -339,3 +342,58 @@ class IdentifyView(ArcGisMapServerMixin, IdentifyViewBase):
         return self.apply_time_to_configurations(
             [IdentifyConfiguration(v, **config_params) for v in variable_set], data
         )
+
+
+class LegendView(ArcGisMapServerMixin, LegendViewBase):
+    def serialize_data(self, data):
+        def get_legend_elements(elements):
+            # Stretched legends need to be split into several elements
+            if len(elements) == 1 and len(elements[0].labels) > 1:
+                element = elements[0]
+                labels = element.labels
+                elements = [
+                    LegendElement(None, [1], [labels[0]]),
+                    LegendElement(element.image, [.5], ['']),
+                    LegendElement(None, [0], [labels[-1]])
+                ]
+
+            return [
+                {
+                    'label': element.labels[0],
+                    'url': None,  # TODO
+                    'imageData': element.image_base64,
+                    'contentType': 'image/png',
+                    'height': element.image.size[1] if element.image else None,
+                    'width': element.image.size[0] if element.image else None
+                } for element in elements
+            ]
+
+        output = {
+            'layers': [
+                {
+                    'layerId': variable.index,
+                    'layerName': variable.name,
+                    'layerType': 'Raster Layer',
+                    'minScale': 0,
+                    'maxScale': 0,
+                    'legend': get_legend_elements(elements)
+                }
+                for variable, elements in six.iteritems(data)
+            ]
+        }
+
+        return json.dumps(output), 'application/json'
+
+    def get_service_name(self, request, *args, **kwargs):
+        return kwargs['service_name']
+
+    def get_legend_configurations(self, request, **kwargs):
+        configurations = [LegendConfiguration(v) for v in self.service.variable_set.all().order_by('index')]
+        for config in configurations:
+            if isinstance(config.renderer, StretchedRenderer):
+                config.size = (30, 32)
+            elif isinstance(config.renderer, ClassifiedRenderer):
+                config.size = (20, 20)
+            else:
+                config.size = (36, 20)
+        return configurations
