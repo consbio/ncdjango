@@ -4,6 +4,7 @@ from django.core.exceptions import ImproperlyConfigured
 from django.utils.importlib import import_module
 
 DEFAULT_INSTALLED_INTERFACES = (
+    'ncdjango.interfaces.data',
     'ncdjango.interfaces.arcgis_extended',
     'ncdjango.interfaces.arcgis'
 )

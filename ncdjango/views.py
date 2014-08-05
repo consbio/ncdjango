@@ -36,6 +36,19 @@ class ServiceView(View):
 
         super(ServiceView, self).__init__(*args, **kwargs)
 
+    def get_service_name(self, request, *args, **kwargs):
+        """
+        This method should be implemented by the interface view class to return the service name based on the request
+        and URL parameters (provided as args and kwargs.
+        """
+
+        raise NotImplementedError
+
+    def handle_request(self, request, **kwargs):
+        """This method is called in response to either a GET or POST with GET or POST data respectively"""
+
+        raise NotImplementedError
+
     def dispatch(self, request, *args, **kwargs):
         self.service = get_object_or_404(Service, name=self.get_service_name(request, *args, **kwargs))
         return super(ServiceView, self).dispatch(request, *args, **kwargs)
@@ -134,14 +147,6 @@ class GetImageViewBase(NetCdfDatasetMixin, ServiceView):
         This method should be implemented by the interface view class to process an incoming request and return a list
         of RenderConfiguration objects (one per variable to render). When rendering multiple variables, the first
         variable in the returned list will be placed at the top of the final image.
-        """
-
-        raise NotImplementedError
-
-    def get_service_name(self, request, *args, **kwargs):
-        """
-        This method should be implemented by the interface view class to return the service name based on the request
-        and URL parameters (provided as args and kwargs.
         """
 
         raise NotImplementedError
@@ -258,14 +263,6 @@ class IdentifyViewBase(NetCdfDatasetMixin, ServiceView):
         """
         This method should be implemented by the interface view class to process an incoming request and return a list
         of IdentifyConfiguration objects (one per variable to identify).
-        """
-
-        raise NotImplementedError
-
-    def get_service_name(self, request, *args, **kwargs):
-        """
-        This method should be implemented by the interface view class to return the service name based on the request
-        and URL parameters (provided as args and kwargs.
         """
 
         raise NotImplementedError

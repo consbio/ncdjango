@@ -30,7 +30,7 @@ class Service(models.Model):
         ('centuries', 'Centuries')
     )
 
-    name = models.CharField(max_length=256, db_index=True)
+    name = models.CharField(max_length=256, db_index=True, unique=True)
     description = models.TextField(null=True)
     data_path = models.FilePathField(SERVICE_DATA_ROOT, recursive=True)
     projection = models.TextField()  # PROJ4 definition
@@ -122,7 +122,7 @@ class Variable(models.Model):
     service = models.ForeignKey(Service)
     index = models.PositiveIntegerField()
     variable = models.CharField(max_length=256)
-    name = models.CharField(max_length=256)
+    name = models.CharField(max_length=256, db_index=True)
     description = models.TextField(null=True)
     renderer = RasterRendererField()
     full_extent = BoundingBoxField()
