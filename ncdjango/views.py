@@ -340,6 +340,8 @@ class LegendViewBase(NetCdfDatasetMixin, ServiceView):
         return HttpResponse(content=content, content_type=content_type)
 
     def handle_request(self, request, **kwargs):
+        dataset = self.open_dataset(self.service)
+
         try:
             configurations = self.get_legend_configurations(request, **kwargs)
             if not configurations:
@@ -348,7 +350,8 @@ class LegendViewBase(NetCdfDatasetMixin, ServiceView):
             data = {}
 
             for config in configurations:
-                data[config.variable] = config.renderer.get_legend(*config.size)
+                min_value = numpy.min(dataset.variables[config.variable.variable][:])
+                data[config.variable] = config.renderer.get_legend(*config.size, min_value=min_value)
 
             data, content_type = self.serialize_data(data)
             return self.create_response(request, data,content_type=content_type)
