@@ -345,6 +345,16 @@ class IdentifyView(ArcGisMapServerMixin, IdentifyViewBase):
 
 
 class LegendView(ArcGisMapServerMixin, LegendViewBase):
+    def set_legend_sizes(self, configurations):
+        for config in configurations:
+            if isinstance(config.renderer, StretchedRenderer):
+                config.size = (30, 32)
+            elif isinstance(config.renderer, ClassifiedRenderer):
+                config.size = (20, 20)
+            else:
+                config.size = (36, 20)
+        return configurations
+
     def serialize_data(self, data):
         def get_legend_elements(elements):
             # Stretched legends need to be split into several elements
@@ -389,11 +399,4 @@ class LegendView(ArcGisMapServerMixin, LegendViewBase):
 
     def get_legend_configurations(self, request, **kwargs):
         configurations = [LegendConfiguration(v) for v in self.service.variable_set.all().order_by('index')]
-        for config in configurations:
-            if isinstance(config.renderer, StretchedRenderer):
-                config.size = (30, 32)
-            elif isinstance(config.renderer, ClassifiedRenderer):
-                config.size = (20, 20)
-            else:
-                config.size = (36, 20)
-        return configurations
+        return self.set_legend_sizes(configurations)
