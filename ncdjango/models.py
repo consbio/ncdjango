@@ -1,11 +1,17 @@
 from datetime import timedelta
+import logging
+import uuid
 from django.conf import settings
 from django.core.exceptions import ValidationError
 from django.db import models
+from django.db.models.signals import post_delete
 from ncdjango.fields import BoundingBoxField, RasterRendererField
 from ncdjango.utils import auto_memoize
 
+logger = logging.getLogger(__name__)
+
 SERVICE_DATA_ROOT = getattr(settings, 'NC_SERVICE_DATA_ROOT', '/var/ncdjango/services/')
+TEMPORARY_FILE_LOCATION = getattr(settings, 'NC_TEMPORARY_FILE_LOCATION', '/tmp')
 
 
 class Service(models.Model):
@@ -130,3 +136,29 @@ class Variable(models.Model):
     time_start = models.DateTimeField(null=True)
     time_end = models.DateTimeField(null=True)
     time_steps = models.PositiveIntegerField(null=True)
+
+
+class TemporaryFile(models.Model):
+    """A temporary file upload"""
+
+    uuid = models.CharField(max_length=36, default=uuid.uuid4)
+    date = models.DateTimeField(auto_now_add=True)
+    filename = models.CharField(max_length=100)
+    filesize = models.BigIntegerField()
+    file = models.FileField(upload_to=TEMPORARY_FILE_LOCATION, max_length=1024)
+
+    @property
+    def extension(self):
+        if self.filename.find(".") != -1:
+            return self.filename[self.filename.rfind(".")+1:]
+        else:
+            return ""
+
+
+def temporary_file_deleted(sender, instance, **kwargs):
+    if instance.file.name:
+        try:
+            instance.file.delete(save=False)
+        except IOError:
+            logger.exception("Error deleting temporary file: %s" % instance.file.name)
+post_delete.connect(temporary_file_deleted, sender=TemporaryFile)
