@@ -1,19 +1,24 @@
+import logging
+import os
 from zipfile import ZipFile
 from clover.geometry.bbox import BBox
+from django.core.exceptions import ObjectDoesNotExist
 from django.core.files.base import File
 from django.core.files.storage import default_storage
-from django.db.transaction import commit_on_success
+from django.db.transaction import atomic
 from django.utils.six import BytesIO
 import pyproj
 from tastypie import fields
 from tastypie.authentication import SessionAuthentication
 from tastypie.authorization import DjangoAuthorization
-from tastypie.exceptions import ImmediateHttpResponse
+from tastypie.exceptions import ImmediateHttpResponse, NotFound
 from tastypie.http import HttpBadRequest
 from tastypie.resources import ModelResource
 from tastypie.serializers import Serializer
 from ncdjango.interfaces.arcgis_extended.utils import get_renderer_from_definition
 from ncdjango.models import TemporaryFile, Service, Variable, SERVICE_DATA_ROOT
+
+logger = logging.getLogger(__name__)
 
 
 class TemporaryFileResource(ModelResource):
@@ -65,7 +70,7 @@ class ServiceResource(ModelResource):
         bundle.data['initial_extent'] = BBox(bundle.data['initial_extent'])
         return bundle
 
-    @commit_on_success
+    @atomic
     def obj_create(self, bundle, **kwargs):
         bundle = super(ServiceResource, self).obj_create(bundle, **kwargs)
 
@@ -105,6 +110,24 @@ class ServiceResource(ModelResource):
             return bundle
         else:
             raise ImmediateHttpResponse(HttpBadRequest("Missing required 'tmp_file' parameter"))
+
+    def obj_delete(self, bundle, **kwargs):
+        if not hasattr(bundle.obj, 'delete'):
+            try:
+                bundle.obj = self.obj_get(bundle=bundle, **kwargs)
+            except ObjectDoesNotExist:
+                raise NotFound("A model instance matching the provided arguments could not be found.")
+
+        data_file = os.path.join(SERVICE_DATA_ROOT, bundle.obj.data_path)
+
+        with atomic():
+            super(ServiceResource, self).obj_delete(bundle, **kwargs)
+
+        if bundle.request.GET.get('delete_data', 'false').lower().strip() == "true":
+            try:
+                os.remove(data_file)
+            except OSError:
+                logger.warn('Could not delete file {}'.format(data_file))
 
 
 class VariableResource(ModelResource):
