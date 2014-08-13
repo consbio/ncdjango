@@ -4,6 +4,7 @@ from django.core.files.base import File
 from django.core.files.storage import default_storage
 from django.db.transaction import commit_on_success
 from django.utils.six import BytesIO
+import pyproj
 from tastypie import fields
 from tastypie.authentication import SessionAuthentication
 from tastypie.authorization import DjangoAuthorization
@@ -67,6 +68,13 @@ class ServiceResource(ModelResource):
     @commit_on_success
     def obj_create(self, bundle, **kwargs):
         bundle = super(ServiceResource, self).obj_create(bundle, **kwargs)
+
+        projection = pyproj.Proj(bundle.obj.projection)
+        bundle.obj.full_extent.projection = projection
+        bundle.obj.initial_extent.projection = projection
+        for variable in bundle.obj.variable_set.all():
+            variable.full_extent.projection = projection
+
         if bundle.data.get('tmp_file'):
             tmp_file = TemporaryFileResource().get_via_uri(bundle.data['tmp_file'], request=bundle.request)
             tmp_file.file.open()

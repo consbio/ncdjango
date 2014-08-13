@@ -38,7 +38,7 @@ class BoundingBoxField(with_metaclass(models.SubfieldBase, models.TextField)):
             'ymin': value.ymin,
             'xmax': value.xmax,
             'ymax': value.ymax,
-            'proj4': value.projection
+            'proj4': value.projection.srs if value.projection else None
         })
 
 
