@@ -1,7 +1,10 @@
 from django.conf import settings
-from django.conf.urls import patterns
+from django.conf.urls import patterns, include, url
 from django.core.exceptions import ImproperlyConfigured
 from django.utils.importlib import import_module
+from tastypie.api import Api
+from ncdjango.api import TemporaryFileResource, ServiceResource, VariableResource
+from ncdjango.views import TemporaryFileFormView
 
 DEFAULT_INSTALLED_INTERFACES = (
     'ncdjango.interfaces.data',
@@ -23,3 +26,13 @@ for interface in INSTALLED_INTERFACES:
         urlpatterns += getattr(module, 'urlpatterns')
     except AttributeError:
         raise ImproperlyConfigured("Interface URLs file has no urlpatterns")
+
+api = Api(api_name="admin")
+api.register(TemporaryFileResource())
+api.register(ServiceResource())
+api.register(VariableResource())
+
+urlpatterns += patterns('',
+    url(r'^api/admin/upload/$', TemporaryFileFormView.as_view(), name='nc_admin_upload'),
+    url(r'^api/', include(api.urls))
+)

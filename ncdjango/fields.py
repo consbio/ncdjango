@@ -21,7 +21,7 @@ class BoundingBoxField(with_metaclass(models.SubfieldBase, models.TextField)):
 
         try:
             data = json.loads(value)
-            projection = pyproj.Proj(data.get('proj4')) if 'proj4' in data else None
+            projection = pyproj.Proj(data.get('proj4')) if data.get('proj4') else None
 
             return BBox(
                 (data['xmin'], data['ymin'], data['xmax'], data['ymax']), projection=projection
@@ -99,9 +99,12 @@ class RasterRendererField(with_metaclass(models.SubfieldBase, models.TextField))
             raise ValidationError("")
 
         params.update({
-            'colormap': [(c[0], c[1].to_tuple()) for c in value.colormap],
-            'fill_value': value.background_color,
+            'fill_value': value.background_color.to_tuple(),
             'background_color': value.background_color.to_tuple(),
         })
 
-        return json.dumps({'name': name, 'params': params})
+        return json.dumps({
+            'name': name,
+            'colormap': [(c[0], c[1].to_tuple()) for c in value.colormap],
+            'params': params
+        })

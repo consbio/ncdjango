@@ -1,19 +1,24 @@
+import json
 import os
 from PIL import Image
 from clover.geometry.bbox import BBox
 from clover.geometry.mask import mask_from_geometry
 from django.conf import settings
+from django.contrib.auth.decorators import login_required, permission_required
 from django.core.cache import get_cache
 from django.http.response import HttpResponseBadRequest, HttpResponse
 from django.shortcuts import get_object_or_404
+from django.utils.decorators import method_decorator
 from django.views.generic import View
 import time
 import netCDF4
+from django.views.generic.edit import ProcessFormView, FormMixin, CreateView
 import numpy
 import pyproj
 from shapely.geometry import Point
 import six
 from ncdjango.exceptions import ConfigurationError
+from ncdjango.forms import TemporaryFileForm
 from ncdjango.geoimage import GeoImage
 from ncdjango.models import Service, SERVICE_DATA_ROOT
 from ncdjango.utils import project_geometry, proj4_to_wkt
@@ -357,3 +362,36 @@ class LegendViewBase(NetCdfDatasetMixin, ServiceView):
             return self.create_response(request, data,content_type=content_type)
         finally:
             self.close_dataset()
+
+
+class TemporaryFileFormView(ProcessFormView, FormMixin):
+    form_class = TemporaryFileForm
+
+    @method_decorator(login_required)
+    @method_decorator(permission_required('ncdjango.add_temporaryfile'))
+    def dispatch(self, request, *args, **kwargs):
+        return super(TemporaryFileFormView, self).dispatch(request, *args, **kwargs)
+
+    def form_valid(self, form):
+        tmp_file = form.save(commit=False)
+        tmp_file.filename = self.request.FILES['file'].name
+        tmp_file.filesize = self.request.FILES['file'].size
+
+        #Truncate filename if necessary
+        if len(tmp_file.filename) > 100:
+            base_filename = tmp_file.filename[:tmp_file.filename.rfind(".")]
+            tmp_file.filename = "%s.%s" % (base_filename[:99-len(tmp_file.extension)], tmp_file.extension)
+
+        tmp_file.save()
+
+        data = {
+            'uuid': str(tmp_file.uuid)
+        }
+
+        response = HttpResponse(json.dumps(data), status=201)
+        response['Content-type'] = "text/plain"
+
+        return response
+
+    def form_invalid(self, form):
+        return HttpResponseBadRequest()
