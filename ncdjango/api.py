@@ -141,8 +141,8 @@ class VariableResource(ModelResource):
         authentication = SessionAuthentication()
         authorization = DjangoAuthorization()
         fields = [
-            'id', 'index', 'variable', 'name', 'description', 'renderer', 'full_extent', 'supports_time', 'time_start',
-            'time_end', 'time_steps'
+            'id', 'index', 'variable', 'projection', 'name', 'description', 'renderer', 'full_extent',
+            'supports_time', 'time_start', 'time_end', 'time_steps'
         ]
         serializer = Serializer(formats=['json', 'jsonp'])
 
@@ -156,3 +156,11 @@ class VariableResource(ModelResource):
     def hydrate_renderer(self, bundle):
         bundle.data['renderer'] = get_renderer_from_definition(bundle.data['renderer'])
         return bundle
+
+    def save(self, bundle, skip_errors=False):
+        if not bundle.obj.projection:
+            bundle.obj.projection = bundle.obj.service.projection
+
+        bundle.obj.full_extent.projection = pyproj.Proj(bundle.obj.projection)
+
+        return super(VariableResource, self).save(bundle, skip_errors=skip_errors)

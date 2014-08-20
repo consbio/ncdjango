@@ -128,6 +128,7 @@ class Variable(models.Model):
     service = models.ForeignKey(Service)
     index = models.PositiveIntegerField()
     variable = models.CharField(max_length=256)
+    projection = models.TextField()  # PROJ4 definition
     name = models.CharField(max_length=256, db_index=True)
     description = models.TextField(null=True)
     renderer = RasterRendererField()

@@ -222,28 +222,16 @@ class GetImageViewBase(NetCdfDatasetMixin, ServiceView):
             if not configurations:
                 return HttpResponse()
 
-            full_extent_image = None
-            extent = None
-            size = None
-            background_color = None
-            image_format = None
+            base_config = configurations[0]
+            extent = self._normalize_bbox(base_config.extent, base_config.size)
+            size = base_config.size
+            final_image = Image.new('RGBA', size, base_config.background_color.to_tuple())
 
             for config in reversed(configurations):
-                image = self.get_full_extent_image(config)
+                image = GeoImage(self.get_full_extent_image(config), config.variable.full_extent)
+                final_image.paste(image.warp(extent, size).image, None)
 
-                if full_extent_image:
-                    full_extent_image.paste(image, None)
-                else:
-                    full_extent_image = image
-                    extent = self._normalize_bbox(config.extent, config.size)
-                    size = config.size
-                    background_color = config.background_color
-                    image_format = config.image_format
-
-            final_image = Image.new('RGBA', size, background_color.to_tuple())
-            full_extent_image = GeoImage(full_extent_image, configurations[0].variable.full_extent)
-            final_image.paste(full_extent_image.warp(extent, size).image, None)
-            final_image, content_type = self.format_image(final_image, image_format)
+            final_image, content_type = self.format_image(final_image, base_config.image_format)
 
             return self.create_response(request, final_image, content_type)
 
