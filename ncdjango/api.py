@@ -11,7 +11,7 @@ from django.core.files.storage import default_storage
 from django.db.transaction import atomic
 from django.utils.six import BytesIO
 from ocgis import Inspect
-from ocgis.exc import ResolutionError
+from ocgis.exc import OcgException, CFException
 import pyproj
 from tastypie import fields
 from tastypie.authentication import SessionAuthentication
@@ -86,31 +86,41 @@ class TemporaryFileResource(ModelResource):
                 'dimensions': {},
                 'variables': {}
             }
+
             for dimension in dataset_info.meta['dimensions'].items():
                 data['dimensions'][dimension[0]] = {
                     'length': dimension[1].get('len'),
                     'is_unlimited': dimension[1].get('isunlimited', False)
                 }
+
+                if dimension[0] in dataset_info.meta['variables']:
+                    data['dimensions'][dimension[0]]['attributes'] = (
+                        dataset_info.meta['variables'][dimension[0]].get('attrs')
+                    )
+
             for variable in dataset_info.meta['variables'].items():
                 if variable[0] not in data['dimensions'] and len(variable[1].get('dimensions', [])) >= 2:
-                    variable_info = Inspect(dataset_path, variable=variable[0])
+                    try:
+                        variable_info = Inspect(dataset_path, variable=variable[0])
+                    except (ValueError, CFException):
+                        variable_info = None
 
                     data['variables'][variable[0]] = {
                         'dimensions': list(variable[1].get('dimensions') or []),
                         'attributes': variable[1].get('attrs'),
-                        'proj4': variable_info.ds.spatial.crs.sr.ExportToProj4(),
+                        'proj4': variable_info.ds.spatial.crs.sr.ExportToProj4() if variable_info else None
                     }
 
-                    try:
-                        data['variables'][variable[0]]['time'] = {
-                            'extent': [x.isoformat(' ') for x in variable_info.ds.temporal.extent_datetime],
-                            'calendar': variable_info.ds.temporal.calendar,
-                            'count': variable_info.ds.temporal.shape[0],
-                            'resolution': variable_info.ds.temporal.resolution
-                        }
-                    except ResolutionError:
-                        pass
-
+                    if variable_info:
+                        try:
+                            data['variables'][variable[0]]['time'] = {
+                                'extent': [x.isoformat(' ') for x in variable_info.ds.temporal.extent_datetime],
+                                'calendar': variable_info.ds.temporal.calendar,
+                                'count': variable_info.ds.temporal.shape[0],
+                                'resolution': variable_info.ds.temporal.resolution
+                            }
+                        except (OcgException, CFException):
+                            pass
 
             bundle.data = data
             return self.create_response(request, bundle)
