@@ -1,12 +1,17 @@
 import logging
 import os
+import shutil
+from tempfile import mkdtemp
 from zipfile import ZipFile
 from clover.geometry.bbox import BBox
+from django.conf.urls import url
 from django.core.exceptions import ObjectDoesNotExist
 from django.core.files.base import File
 from django.core.files.storage import default_storage
 from django.db.transaction import atomic
 from django.utils.six import BytesIO
+from ocgis import Inspect
+from ocgis.exc import ResolutionError
 import pyproj
 from tastypie import fields
 from tastypie.authentication import SessionAuthentication
@@ -15,6 +20,7 @@ from tastypie.exceptions import ImmediateHttpResponse, NotFound
 from tastypie.http import HttpBadRequest
 from tastypie.resources import ModelResource
 from tastypie.serializers import Serializer
+from tastypie.utils import trailing_slash
 from ncdjango.interfaces.arcgis_extended.utils import get_renderer_from_definition
 from ncdjango.models import TemporaryFile, Service, Variable, SERVICE_DATA_ROOT
 
@@ -34,6 +40,87 @@ class TemporaryFileResource(ModelResource):
         fields = ['uuid', 'date', 'filename']
         detail_uri_name = 'uuid'
         serializer = Serializer(formats=['json', 'jsonp'])
+
+    def prepend_urls(self):
+        return [
+            url(
+                r"^(?P<resource_name>%s)/(?P<%s>.*?)/inspect%s$" % (
+                    self._meta.resource_name, self._meta.detail_uri_name, trailing_slash()
+                ),
+                self.wrap_view('inspect'), name='temporary_file_inspect'
+            )
+        ]
+
+    def inspect(self, request, **kwargs):
+        bundle = self.build_bundle(request=request)
+        obj = self.obj_get(bundle, **self.remove_api_resource_names(kwargs))
+
+        temp_dir = None
+
+        try:
+            if obj.extension == 'nc':
+                dataset_path = obj.file.name
+            elif obj.extension == 'zip':
+                temp_dir = mkdtemp()
+                zf = ZipFile(obj.file.name)
+
+                try:
+                    nc_name = None
+
+                    for name in zf.namelist():
+                        if name[-3:] == '.nc':
+                            nc_name = name
+
+                    if nc_name:
+                        zf.extract(nc_name, temp_dir)
+                        dataset_path = os.path.join(temp_dir, nc_name)
+                    else:
+                        raise ImmediateHttpResponse(HttpBadRequest('No .nc file found in zip archive.'))
+                finally:
+                    zf.close()
+            else:
+                raise ImmediateHttpResponse(HttpBadRequest('Unsupported file format.'))
+
+            dataset_info = Inspect(dataset_path)
+            data = {
+                'dimensions': {},
+                'variables': {}
+            }
+            for dimension in dataset_info.meta['dimensions'].items():
+                data['dimensions'][dimension[0]] = {
+                    'length': dimension[1].get('len'),
+                    'is_unlimited': dimension[1].get('isunlimited', False)
+                }
+            for variable in dataset_info.meta['variables'].items():
+                if variable[0] not in data['dimensions'] and len(variable[1].get('dimensions', [])) >= 2:
+                    variable_info = Inspect(dataset_path, variable=variable[0])
+
+                    data['variables'][variable[0]] = {
+                        'dimensions': list(variable[1].get('dimensions') or []),
+                        'attributes': variable[1].get('attrs'),
+                        'proj4': variable_info.ds.spatial.crs.sr.ExportToProj4(),
+                    }
+
+                    try:
+                        data['variables'][variable[0]]['time'] = {
+                            'extent': [x.isoformat(' ') for x in variable_info.ds.temporal.extent_datetime],
+                            'calendar': variable_info.ds.temporal.calendar,
+                            'count': variable_info.ds.temporal.shape[0],
+                            'resolution': variable_info.ds.temporal.resolution
+                        }
+                    except ResolutionError:
+                        pass
+
+
+            bundle.data = data
+            return self.create_response(request, bundle)
+
+        finally:
+            try:
+                if temp_dir is not None:
+                    shutil.rmtree(temp_dir)
+            except (IOError, OSError):
+                pass
 
 
 class ServiceResource(ModelResource):
