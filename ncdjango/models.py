@@ -17,6 +17,21 @@ TEMPORARY_FILE_LOCATION = getattr(settings, 'NC_TEMPORARY_FILE_LOCATION', '/tmp'
 class Service(models.Model):
     """Map service"""
 
+    name = models.CharField(max_length=256, db_index=True, unique=True)
+    description = models.TextField(null=True)
+    data_path = models.FilePathField(SERVICE_DATA_ROOT, recursive=True)
+    projection = models.TextField()  # PROJ4 definition
+    full_extent = BoundingBoxField()
+    initial_extent = BoundingBoxField()
+    supports_time = models.BooleanField(default=False)
+    time_start = models.DateTimeField(null=True)
+    time_end = models.DateTimeField(null=True)
+    render_top_layer_only = models.BooleanField(default=True)
+
+
+class Variable(models.Model):
+    """A variable/layer in a map service. Each service may have one or more variables."""
+
     CALENDAR_CHOICES = (
         ('standard', 'Standard Gregorian'),
         ('noleap', 'Standard, no leap years'),
@@ -36,26 +51,28 @@ class Service(models.Model):
         ('centuries', 'Centuries')
     )
 
-    name = models.CharField(max_length=256, db_index=True, unique=True)
-    description = models.TextField(null=True)
-    data_path = models.FilePathField(SERVICE_DATA_ROOT, recursive=True)
+    service = models.ForeignKey(Service)
+    index = models.PositiveIntegerField()
+    variable = models.CharField(max_length=256)
     projection = models.TextField()  # PROJ4 definition
-    full_extent = BoundingBoxField()
-    initial_extent = BoundingBoxField()
     x_dimension = models.CharField(max_length=256)
     y_dimension = models.CharField(max_length=256)
+    name = models.CharField(max_length=256, db_index=True)
+    description = models.TextField(null=True)
+    renderer = RasterRendererField()
+    full_extent = BoundingBoxField()
     supports_time = models.BooleanField(default=False)
     time_dimension = models.CharField(max_length=256, null=True)
     time_start = models.DateTimeField(null=True)
     time_end = models.DateTimeField(null=True)
+    time_steps = models.PositiveIntegerField(null=True)
     time_interval = models.PositiveIntegerField(null=True)
     time_interval_units = models.CharField(max_length=15, choices=TIME_UNITS_CHOICES, null=True)
     calendar = models.CharField(max_length=10, choices=CALENDAR_CHOICES, null=True)
-    render_top_layer_only = models.BooleanField(default=True)
 
     @property
     @auto_memoize
-    def time_steps(self):
+    def time_stops(self):
         """Valid time steps for this service as a list of datetime objects."""
 
         if not self.supports_time:
@@ -119,24 +136,7 @@ class Service(models.Model):
         if self.supports_time and not has_required_time_fields:
             raise ValidationError("Service supports time but is missing one or more time-related fields")
 
-        return super(Service, self).save(*args, **kwargs)
-
-
-class Variable(models.Model):
-    """A variable/layer in a map service. Each service may have one or more variables."""
-
-    service = models.ForeignKey(Service)
-    index = models.PositiveIntegerField()
-    variable = models.CharField(max_length=256)
-    projection = models.TextField()  # PROJ4 definition
-    name = models.CharField(max_length=256, db_index=True)
-    description = models.TextField(null=True)
-    renderer = RasterRendererField()
-    full_extent = BoundingBoxField()
-    supports_time = models.BooleanField(default=False)
-    time_start = models.DateTimeField(null=True)
-    time_end = models.DateTimeField(null=True)
-    time_steps = models.PositiveIntegerField(null=True)
+        return super(Variable, self).save(*args, **kwargs)
 
 
 class TemporaryFile(models.Model):

@@ -22,7 +22,7 @@ class ConfigurationBase(object):
         it will raise a ValueError for any value which doesn't exactly match a time index.
         """
 
-        steps = self.variable.service.time_steps
+        steps = self.variable.time_stops
         if value in steps:
             self.time_index = steps.index(value)
         elif best_fit:

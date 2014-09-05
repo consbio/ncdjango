@@ -173,9 +173,8 @@ class ServiceResource(ModelResource):
         authentication = SessionAuthentication()
         authorization = DjangoAuthorization()
         fields = [
-            'id', 'name', 'description', 'data_path', 'projection', 'full_extent', 'initial_extent', 'x_dimension',
-            'y_dimension', 'supports_time', 'time_dimension', 'time_start', 'time_end', 'time_interval',
-            'time_interval_units', 'calendar', 'render_top_layer_only'
+            'id', 'name', 'description', 'data_path', 'projection', 'full_extent', 'initial_extent', 'supports_time',
+            'time_start', 'time_end', 'render_top_layer_only'
         ]
         serializer = Serializer(formats=['json', 'jsonp'])
 
