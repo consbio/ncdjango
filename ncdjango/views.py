@@ -6,9 +6,10 @@ from clover.geometry.mask import mask_from_geometry
 from django.conf import settings
 from django.contrib.auth.decorators import login_required, permission_required
 from django.core.cache import get_cache
-from django.http.response import HttpResponseBadRequest, HttpResponse
+from django.http.response import HttpResponseBadRequest, HttpResponse, HttpResponseForbidden
 from django.shortcuts import get_object_or_404
 from django.utils.decorators import method_decorator
+from django.views.decorators.csrf import csrf_exempt
 from django.views.generic import View
 import time
 import netCDF4
@@ -17,6 +18,7 @@ import numpy
 import pyproj
 from shapely.geometry import Point
 import six
+from tastypie.authentication import ApiKeyAuthentication
 from ncdjango.exceptions import ConfigurationError
 from ncdjango.forms import TemporaryFileForm
 from ncdjango.geoimage import GeoImage
@@ -357,6 +359,7 @@ class TemporaryFileFormView(ProcessFormView, FormMixin):
 
     @method_decorator(login_required)
     @method_decorator(permission_required('ncdjango.add_temporaryfile'))
+    @method_decorator(csrf_exempt)
     def dispatch(self, request, *args, **kwargs):
         return super(TemporaryFileFormView, self).dispatch(request, *args, **kwargs)
 
