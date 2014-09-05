@@ -1,8 +1,10 @@
 import logging
+from netCDF4 import Dataset
 import os
 import shutil
 from tempfile import mkdtemp
 from zipfile import ZipFile
+
 from clover.geometry.bbox import BBox
 from django.conf.urls import url
 from django.core.exceptions import ObjectDoesNotExist
@@ -10,19 +12,22 @@ from django.core.files.base import File
 from django.core.files.storage import default_storage
 from django.db.transaction import atomic
 from django.utils.six import BytesIO
+import numpy
 from ocgis import Inspect
 from ocgis.exc import OcgException, CFException
 import pyproj
 from tastypie import fields
-from tastypie.authentication import SessionAuthentication
+from tastypie.authentication import SessionAuthentication, MultiAuthentication, ApiKeyAuthentication
 from tastypie.authorization import DjangoAuthorization
 from tastypie.exceptions import ImmediateHttpResponse, NotFound
 from tastypie.http import HttpBadRequest
 from tastypie.resources import ModelResource
 from tastypie.serializers import Serializer
 from tastypie.utils import trailing_slash
+
 from ncdjango.interfaces.arcgis_extended.utils import get_renderer_from_definition
 from ncdjango.models import TemporaryFile, Service, Variable, SERVICE_DATA_ROOT
+
 
 logger = logging.getLogger(__name__)
 
@@ -35,11 +40,17 @@ class TemporaryFileResource(ModelResource):
         list_allowed_methods = ['get']
         detail_allowed_methods = ['get', 'delete']
         resource_name = 'temporary-files'
-        authentication = SessionAuthentication()
+        authentication = MultiAuthentication(SessionAuthentication(), ApiKeyAuthentication())
         authorization = DjangoAuthorization()
         fields = ['uuid', 'date', 'filename']
         detail_uri_name = 'uuid'
         serializer = Serializer(formats=['json', 'jsonp'])
+
+    def _convert_number(self, number):
+        """Converts a number to float or int as appropriate"""
+
+        number = float(number)
+        return int(number) if number.is_integer() else float(number)
 
     def prepend_urls(self):
         return [
@@ -52,6 +63,8 @@ class TemporaryFileResource(ModelResource):
         ]
 
     def inspect(self, request, **kwargs):
+        self.is_authenticated(request)
+
         bundle = self.build_bundle(request=request)
         obj = self.obj_get(bundle, **self.remove_api_resource_names(kwargs))
 
@@ -82,6 +95,7 @@ class TemporaryFileResource(ModelResource):
                 raise ImmediateHttpResponse(HttpBadRequest('Unsupported file format.'))
 
             dataset_info = Inspect(dataset_path)
+            dataset = Dataset(dataset_path)
             data = {
                 'dimensions': {},
                 'variables': {}
@@ -94,9 +108,11 @@ class TemporaryFileResource(ModelResource):
                 }
 
                 if dimension[0] in dataset_info.meta['variables']:
-                    data['dimensions'][dimension[0]]['attributes'] = (
-                        dataset_info.meta['variables'][dimension[0]].get('attrs')
-                    )
+                    data['dimensions'][dimension[0]].update({
+                        'attributes': dataset_info.meta['variables'][dimension[0]].get('attrs'),
+                        'min': self._convert_number(numpy.amin(dataset.variables[dimension[0]])),
+                        'max': self._convert_number(numpy.amax(dataset.variables[dimension[0]]))
+                    })
 
             for variable in dataset_info.meta['variables'].items():
                 if variable[0] not in data['dimensions'] and len(variable[1].get('dimensions', [])) >= 2:
@@ -113,12 +129,22 @@ class TemporaryFileResource(ModelResource):
 
                     if variable_info:
                         try:
-                            data['variables'][variable[0]]['time'] = {
-                                'extent': [x.isoformat(' ') for x in variable_info.ds.temporal.extent_datetime],
-                                'calendar': variable_info.ds.temporal.calendar,
-                                'count': variable_info.ds.temporal.shape[0],
-                                'resolution': variable_info.ds.temporal.resolution
-                            }
+                            data['variables'][variable[0]].update({
+                                'time': {
+                                    'extent': [x.isoformat(' ') for x in variable_info.ds.temporal.extent_datetime],
+                                    'calendar': variable_info.ds.temporal.calendar,
+                                    'count': variable_info.ds.temporal.shape[0],
+                                    'resolution': variable_info.ds.temporal.resolution
+                                }
+                            })
+                        except (OcgException, CFException):
+                            pass
+
+                        try:
+                            data['variables'][variable[0]].update({
+                                'extent': [self._convert_number(x) for x in variable_info.ds.spatial.grid.extent or []],
+                                'resolution': variable_info.ds.spatial.grid.resolution
+                            })
                         except (OcgException, CFException):
                             pass
 
