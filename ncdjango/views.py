@@ -92,9 +92,9 @@ class NetCdfDatasetMixin(object):
         variable = self.open_dataset(self.service).variables[variable_id]
         data = variable[:]
 
-        valid_dimensions = (self.service.y_dimension, self.service.x_dimension)
+        valid_dimensions = (self.y_dimension, self.x_dimension)
         if time_index is not None:
-            valid_dimensions = (self.service.time_dimension,) + valid_dimensions
+            valid_dimensions = (self.time_dimension,) + valid_dimensions
 
         dimensions = list(variable.dimensions)
         for dimension in variable.dimensions:
@@ -102,9 +102,9 @@ class NetCdfDatasetMixin(object):
                 data = numpy.rollaxis(data, dimensions.index(dimension))[0]
                 dimensions.remove(dimension)
 
-        transpose_args = [dimensions.index(self.service.y_dimension), dimensions.index(self.service.x_dimension)]
+        transpose_args = [dimensions.index(self.y_dimension), dimensions.index(self.x_dimension)]
         if time_index is not None:
-            transpose_args.append(dimensions.index(self.service.time_dimension))
+            transpose_args.append(dimensions.index(self.time_dimension))
             data = data.transpose(*transpose_args)[:, :, time_index]
         else:
             data = data.transpose(*transpose_args)
@@ -114,7 +114,7 @@ class NetCdfDatasetMixin(object):
     def is_row_major(self, variable_id):
         variable = self.open_dataset(self.service).variables[variable_id]
         return (
-            variable.dimensions.index(self.service.y_dimension) < variable.dimensions.index(self.service.x_dimension)
+            variable.dimensions.index(self.y_dimension) < variable.dimensions.index(self.x_dimension)
         )
 
     def is_y_increasing(self):
