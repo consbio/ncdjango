@@ -133,8 +133,12 @@ class TemporaryFileResource(ModelResource):
                                 'time': {
                                     'extent': [x.isoformat(' ') for x in variable_info.ds.temporal.extent_datetime],
                                     'calendar': variable_info.ds.temporal.calendar,
+                                    'units': variable_info.ds.temporal.units,
                                     'count': variable_info.ds.temporal.shape[0],
-                                    'resolution': variable_info.ds.temporal.resolution
+                                    'resolution': (
+                                        int(variable_info.ds.temporal.resolution) if
+                                        variable_info.ds.temporal.resolution else None
+                                    )
                                 }
                             })
                         except (OcgException, CFException):
@@ -162,15 +166,18 @@ class TemporaryFileResource(ModelResource):
 class ServiceResource(ModelResource):
     data_path = fields.CharField(attribute='data_path', readonly=True)
     variables = fields.ToManyField(
-        'ncdjango.api.VariableResource', attribute='variable_set', full=True, full_list=False, related_name='service'
+        'ncdjango.api.VariableResource', attribute='variable_set', full=True, full_list=False, related_name='service',
+        null=True
     )
+    full_extent = fields.ListField(attribute='full_extent')
+    initial_extent = fields.ListField(attribute='initial_extent')
 
     class Meta:
         queryset = Service.objects.all()
         list_allowed_methods = ['get', 'post']
         detail_allowed_methods = ['get', 'post', 'put', 'patch', 'delete']
         resource_name = 'services'
-        authentication = SessionAuthentication()
+        authentication = MultiAuthentication(SessionAuthentication(), ApiKeyAuthentication())
         authorization = DjangoAuthorization()
         fields = [
             'id', 'name', 'description', 'data_path', 'projection', 'full_extent', 'initial_extent', 'supports_time',
@@ -254,13 +261,14 @@ class ServiceResource(ModelResource):
 
 class VariableResource(ModelResource):
     service = fields.ToOneField(ServiceResource, attribute='service', full=False)
+    full_extent = fields.ListField(attribute='full_extent')
 
     class Meta:
         queryset = Variable.objects.all()
         list_allowed_methods = ['get', 'post']
         detail_allowed_methods = ['get', 'post', 'put', 'patch', 'delete']
         resource_name = 'variables'
-        authentication = SessionAuthentication()
+        authentication = MultiAuthentication(SessionAuthentication(), ApiKeyAuthentication())
         authorization = DjangoAuthorization()
         fields = [
             'id', 'index', 'variable', 'projection', 'name', 'description', 'renderer', 'full_extent',
