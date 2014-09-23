@@ -1,11 +1,16 @@
 import json
 import os
+import shutil
+import tempfile
+from urllib.error import URLError
+from urllib.parse import unquote
 from PIL import Image
 from clover.geometry.bbox import BBox
-from clover.geometry.mask import mask_from_geometry
 from django.conf import settings
 from django.contrib.auth.decorators import login_required, permission_required
 from django.core.cache import get_cache
+from django.core.files import File
+from django.core.files.storage import default_storage
 from django.http.response import HttpResponseBadRequest, HttpResponse, HttpResponseForbidden
 from django.shortcuts import get_object_or_404
 from django.utils.decorators import method_decorator
@@ -18,11 +23,10 @@ import numpy
 import pyproj
 from shapely.geometry import Point
 import six
-from tastypie.authentication import ApiKeyAuthentication
 from ncdjango.exceptions import ConfigurationError
 from ncdjango.forms import TemporaryFileForm
 from ncdjango.geoimage import GeoImage
-from ncdjango.models import Service, SERVICE_DATA_ROOT
+from ncdjango.models import Service, SERVICE_DATA_ROOT, TemporaryFile
 from ncdjango.utils import project_geometry, proj4_to_wkt
 
 CACHE_FULL_EXTENT = getattr(settings, 'NC_CACHE_FULL_EXTENT', False)
@@ -354,19 +358,15 @@ class LegendViewBase(NetCdfDatasetMixin, ServiceView):
             self.close_dataset()
 
 
-class TemporaryFileFormView(ProcessFormView, FormMixin):
-    form_class = TemporaryFileForm
-
+class TemporaryFileUploadViewBase(View):
     @method_decorator(login_required)
     @method_decorator(permission_required('ncdjango.add_temporaryfile'))
     @method_decorator(csrf_exempt)
     def dispatch(self, request, *args, **kwargs):
-        return super(TemporaryFileFormView, self).dispatch(request, *args, **kwargs)
+        return super(TemporaryFileUploadViewBase, self).dispatch(request, *args, **kwargs)
 
-    def form_valid(self, form):
-        tmp_file = form.save(commit=False)
-        tmp_file.filename = self.request.FILES['file'].name
-        tmp_file.filesize = self.request.FILES['file'].size
+    def process_temporary_file(self, tmp_file):
+        """Truncates the filename if necessary, saves the model, and returns a response"""
 
         #Truncate filename if necessary
         if len(tmp_file.filename) > 100:
@@ -384,5 +384,51 @@ class TemporaryFileFormView(ProcessFormView, FormMixin):
 
         return response
 
+
+class TemporaryFileUploadFormView(FormMixin, TemporaryFileUploadViewBase, ProcessFormView):
+    form_class = TemporaryFileForm
+
+    def form_valid(self, form):
+        tmp_file = form.save(commit=False)
+        tmp_file.filename = self.request.FILES['file'].name
+        tmp_file.filesize = self.request.FILES['file'].size
+
+        return self.process_temporary_file(tmp_file)
+
     def form_invalid(self, form):
         return HttpResponseBadRequest()
+
+
+class TemporaryFileUploadUrlView(TemporaryFileUploadViewBase):
+    @csrf_exempt
+    def dispatch(self, request, *args, **kwargs):
+        try:
+            return super(TemporaryFileUploadUrlView, self).dispatch(request, *args, **kwargs)
+        except URLError as e:
+            return HttpResponseBadRequest(e.reason)
+
+    def download_file(self, url):
+        filename = url.split('/')[-1].split('?')[0]
+        url_f = six.moves.urllib.request.urlopen(url)
+        f = tempfile.TemporaryFile()
+        shutil.copyfileobj(url_f, f)
+
+        tmp_file = TemporaryFile(
+            filename=filename
+        )
+        tmp_file.file.save(filename, File(f), save=False)
+        tmp_file.filesize = tmp_file.file.size
+
+        return tmp_file
+
+    def get(self, request):
+        if request.GET.get('url'):
+            return self.process_temporary_file(self.download_file(unquote(request.GET.get('url'))))
+        else:
+            raise HttpResponseBadRequest()
+
+    def post(self, request):
+        if request.POST.get('url'):
+            return self.process_temporary_file(self.download_file(request.POST.get('url')))
+        else:
+            return self.get(request)

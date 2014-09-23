@@ -4,7 +4,7 @@ from django.core.exceptions import ImproperlyConfigured
 from django.utils.importlib import import_module
 from tastypie.api import Api
 from ncdjango.api import TemporaryFileResource, ServiceResource, VariableResource
-from ncdjango.views import TemporaryFileFormView
+from ncdjango.views import TemporaryFileUploadFormView, TemporaryFileUploadUrlView
 
 DEFAULT_INSTALLED_INTERFACES = (
     'ncdjango.interfaces.data',
@@ -33,6 +33,7 @@ api.register(ServiceResource())
 api.register(VariableResource())
 
 urlpatterns += patterns('',
-    url(r'^api/admin/upload/$', TemporaryFileFormView.as_view(), name='nc_admin_upload'),
+    url(r'^api/admin/upload-by-url/$', TemporaryFileUploadUrlView.as_view(), name='nc_admin_upload_by_url'),
+    url(r'^api/admin/upload/$', TemporaryFileUploadFormView.as_view(), name='nc_admin_upload'),
     url(r'^api/', include(api.urls))
 )
