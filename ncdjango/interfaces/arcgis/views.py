@@ -229,7 +229,7 @@ class ArcGisMapServerMixin(object):
             time_value = data['time']
 
             # Only single time values are supported. For extents, just grab the first value
-            if isinstance(data['time'], [tuple, list]):
+            if isinstance(data['time'], (tuple, list)):
                 time_value = time_value[0]
 
         if time_value:
@@ -262,14 +262,16 @@ class GetImageView(ArcGisMapServerMixin, GetImageViewBase):
     def format_image(self, image, image_format):
         """Returns an image in the request format"""
 
-        if image_format in ('png8', 'png24'):
-            alpha = image.split()[-1]
-            image = image.convert('RGB')
-            if image_format == 'png8':
-                image.convert('P', palette=Image.ADAPTIVE, colors=255)
-            image.paste(255, Image.eval(alpha, lambda x: 255 if x <= 128 else 0))
+        image_format = image_format.lower()
+
+        if image_format == 'png8':
+            # Transparency for PNG8 isn't working at the moment...
+            # alpha = image.split()[-1]
+            # image = image.convert('RGB')
+            # image.convert('P', palette=Image.ADAPTIVE, colors=255)
+            # image.paste(255, Image.eval(alpha, lambda x: 255 if x <= 128 else 0))
             image_format = 'png'
-        elif image_format == 'png32':
+        elif image_format in ('png32', 'png24'):
             image_format = 'png'
 
         return super(GetImageView, self).format_image(image, image_format)

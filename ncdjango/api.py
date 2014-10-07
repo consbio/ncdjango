@@ -118,7 +118,7 @@ class TemporaryFileResource(ModelResource):
                 if variable[0] not in data['dimensions'] and len(variable[1].get('dimensions', [])) >= 2:
                     try:
                         variable_info = Inspect(dataset_path, variable=variable[0])
-                    except (ValueError, CFException):
+                    except (ValueError, CFException, KeyError):
                         variable_info = None
 
                     data['variables'][variable[0]] = {
@@ -169,8 +169,6 @@ class ServiceResource(ModelResource):
         'ncdjango.api.VariableResource', attribute='variable_set', full=True, full_list=False, related_name='service',
         null=True
     )
-    full_extent = fields.ListField(attribute='full_extent')
-    initial_extent = fields.ListField(attribute='initial_extent')
 
     class Meta:
         queryset = Service.objects.all()
@@ -181,9 +179,12 @@ class ServiceResource(ModelResource):
         authorization = DjangoAuthorization()
         fields = [
             'id', 'name', 'description', 'data_path', 'projection', 'full_extent', 'initial_extent', 'supports_time',
-            'time_start', 'time_end', 'render_top_layer_only'
+            'time_start', 'time_end', 'render_top_layer_only', 'time_interval', 'time_interval_units', 'calendar'
         ]
         serializer = Serializer(formats=['json', 'jsonp'])
+        filtering = {
+            'name': ['exact', 'in']
+        }
 
     def dehydrate_full_extent(self, bundle):
         return bundle.obj.full_extent.as_list()
@@ -192,11 +193,15 @@ class ServiceResource(ModelResource):
         return bundle.obj.initial_extent.as_list()
 
     def hydrate_full_extent(self, bundle):
-        bundle.data['full_extent'] = BBox(bundle.data['full_extent'])
+        if bundle.data.get('full_extent'):
+            bundle.data['full_extent'] = BBox(bundle.data['full_extent'])
+
         return bundle
 
     def hydrate_initial_extent(self, bundle):
-        bundle.data['initial_extent'] = BBox(bundle.data['initial_extent'])
+        if bundle.data.get('initial_extent'):
+            bundle.data['initial_extent'] = BBox(bundle.data['initial_extent'])
+
         return bundle
 
     @atomic
@@ -261,7 +266,6 @@ class ServiceResource(ModelResource):
 
 class VariableResource(ModelResource):
     service = fields.ToOneField(ServiceResource, attribute='service', full=False)
-    full_extent = fields.ListField(attribute='full_extent')
 
     class Meta:
         queryset = Variable.objects.all()
@@ -271,20 +275,29 @@ class VariableResource(ModelResource):
         authentication = MultiAuthentication(SessionAuthentication(), ApiKeyAuthentication())
         authorization = DjangoAuthorization()
         fields = [
-            'id', 'index', 'variable', 'projection', 'name', 'description', 'renderer', 'full_extent',
-            'supports_time', 'time_start', 'time_end', 'time_steps'
+            'id', 'index', 'variable', 'projection', 'x_dimension', 'y_dimension', 'name', 'description', 'renderer',
+            'full_extent', 'supports_time', 'time_dimension', 'time_start', 'time_end', 'time_steps'
         ]
         serializer = Serializer(formats=['json', 'jsonp'])
+        filtering = {
+            'name': ['exact'],
+            'service': ['exact'],
+            'service__name': ['exact']
+        }
 
     def dehydrate_full_extent(self, bundle):
         return bundle.obj.full_extent.as_list()
 
     def hydrate_full_extent(self, bundle):
-        bundle.data['full_extent'] = BBox(bundle.data['full_extent'])
+        if bundle.data.get('full_extent'):
+            bundle.data['full_extent'] = BBox(bundle.data['full_extent'])
+
         return bundle
 
     def hydrate_renderer(self, bundle):
-        bundle.data['renderer'] = get_renderer_from_definition(bundle.data['renderer'])
+        if bundle.data.get('renderer'):
+            bundle.data['renderer'] = get_renderer_from_definition(bundle.data['renderer'])
+
         return bundle
 
     def save(self, bundle, skip_errors=False):
