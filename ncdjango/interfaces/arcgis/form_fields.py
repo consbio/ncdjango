@@ -140,7 +140,7 @@ class TimeField(forms.Field):
     """Single timestamp or extent"""
 
     def to_python(self, value):
-        if not value or isinstance(value, [datetime, tuple, list]):
+        if not value or isinstance(value, (datetime, tuple, list)):
             return value
 
         try:
@@ -149,13 +149,13 @@ class TimeField(forms.Field):
             else:
                 return datetime(int(value))
         except ValueError:
-            raise ValidationError('Invalid time value(s)')
+            return None
 
     def prepare_value(self, value):
         if not value:
             return value
 
-        if isinstance(value, [tuple, list]):
+        if isinstance(value, (tuple, list)):
             return ",".join([str(date_to_timestamp(x)) for x in value])
         else:
             return str(date_to_timestamp(value))
@@ -165,7 +165,7 @@ class DynamicLayersField(forms.Field):
     """Dynamic layers options"""
 
     def to_python(self, value):
-        if not value or isinstance(value, [dict, list]):
+        if not value or isinstance(value, (dict, list)):
             return value
 
         try:

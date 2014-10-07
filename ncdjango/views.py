@@ -92,37 +92,39 @@ class NetCdfDatasetMixin(object):
             self.dataset.close()
             self.dataset = None
 
-    def get_grid_for_variable(self, variable_id, time_index=None):
-        variable = self.open_dataset(self.service).variables[variable_id]
-        data = variable[:]
+    def get_grid_for_variable(self, variable, time_index=None):
+        netcdf_variable = self.open_dataset(self.service).variables[variable.variable]
+        data = netcdf_variable[:]
 
-        valid_dimensions = (self.y_dimension, self.x_dimension)
+        valid_dimensions = (variable.y_dimension, variable.x_dimension)
         if time_index is not None:
-            valid_dimensions = (self.time_dimension,) + valid_dimensions
+            valid_dimensions = (variable.time_dimension,) + valid_dimensions
 
-        dimensions = list(variable.dimensions)
-        for dimension in variable.dimensions:
+        dimensions = list(netcdf_variable.dimensions)
+        for dimension in netcdf_variable.dimensions:
             if not dimension in valid_dimensions:
                 data = numpy.rollaxis(data, dimensions.index(dimension))[0]
                 dimensions.remove(dimension)
 
-        transpose_args = [dimensions.index(self.y_dimension), dimensions.index(self.x_dimension)]
+        transpose_args = [dimensions.index(variable.y_dimension), dimensions.index(variable.x_dimension)]
         if time_index is not None:
-            transpose_args.append(dimensions.index(self.time_dimension))
+            transpose_args.append(dimensions.index(variable.time_dimension))
             data = data.transpose(*transpose_args)[:, :, time_index]
         else:
             data = data.transpose(*transpose_args)
 
         return data
 
-    def is_row_major(self, variable_id):
-        variable = self.open_dataset(self.service).variables[variable_id]
+    def is_row_major(self, variable):
+        netcdf_variable = self.open_dataset(self.service).variables[variable.variable]
         return (
-            variable.dimensions.index(self.y_dimension) < variable.dimensions.index(self.x_dimension)
+            netcdf_variable.dimensions.index(
+                variable.y_dimension) < netcdf_variable.dimensions.index(variable.x_dimension
+            )
         )
 
-    def is_y_increasing(self):
-        y_variable = self.open_dataset(self.service).variables.get(self.service.y_dimension)
+    def is_y_increasing(self, variable):
+        y_variable = self.open_dataset(self.service).variables.get(variable.y_dimension)
         return y_variable and y_variable[1] > y_variable[0]
 
 
@@ -178,20 +180,22 @@ class GetImageViewBase(NetCdfDatasetMixin, ServiceView):
         return HttpResponse(content=image, content_type=content_type)
 
     def get_full_extent_image(self, config):
+        config_hash = config.hash
+
         if CACHE_FULL_EXTENT:
             cache = get_cache(FULL_EXTENT_CACHE)
             cache_wait_start = time.time()
 
             while time.time() - cache_wait_start < FULL_EXTENT_CACHE_TIMEOUT:
-                image = cache.get(FULL_EXTENT_CACHE_KEY.format(hash=config.hash))
+                image = cache.get(FULL_EXTENT_CACHE_KEY.format(hash=config_hash))
                 if image:
                     return self._cache_to_image(image)  # The full extent has already been rendered
-                elif cache.get(FULL_EXTENT_PENDING_KEY.format(hash=config.hash)):
+                elif cache.get(FULL_EXTENT_PENDING_KEY.format(hash=config_hash)):
                     time.sleep(0.1)  # The full extent render is pending; wait and try again
                     continue
                 else:
                     break  # No full extent and no render pending
-            cache.set(FULL_EXTENT_PENDING_KEY.format(hash=config.hash), True)
+            cache.set(FULL_EXTENT_PENDING_KEY.format(hash=config_hash), True)
 
         try:
             variable = config.variable
@@ -202,25 +206,25 @@ class GetImageViewBase(NetCdfDatasetMixin, ServiceView):
             else:
                 time_index = None
 
-            data = self.get_grid_for_variable(variable.variable, time_index=time_index)
+            data = self.get_grid_for_variable(variable, time_index=time_index)
 
             if hasattr(data, 'fill_value'):
                 config.renderer.fill_value = data.fill_value
 
-            image = config.renderer.render_image(data, row_major_order=self.is_row_major(variable.variable))
+            image = config.renderer.render_image(data, row_major_order=self.is_row_major(variable))
 
             #  If y values are increasing, the rendered image needs to be flipped vertically
-            if self.is_y_increasing():
+            if self.is_y_increasing(variable):
                 image = image.transpose(Image.FLIP_TOP_BOTTOM)
 
             if CACHE_FULL_EXTENT:
-                cache.set(FULL_EXTENT_CACHE_KEY.format(hash=config.hash), self._image_to_cache(image))
+                cache.set(FULL_EXTENT_CACHE_KEY.format(hash=config_hash), self._image_to_cache(image))
 
             return image
         finally:
-            self.close_dataset()
             if CACHE_FULL_EXTENT:
-                cache.delete(FULL_EXTENT_PENDING_KEY.format(hash=config.hash))
+                cache.delete(FULL_EXTENT_PENDING_KEY.format(hash=config_hash))
+            self.close_dataset()
 
     def handle_request(self, request, **kwargs):
         try:
@@ -290,7 +294,7 @@ class IdentifyViewBase(NetCdfDatasetMixin, ServiceView):
 
                 geometry = project_geometry(config.geometry, config.projection, pyproj.Proj(self.service.projection))
                 assert isinstance(geometry, Point)  # Only point-based identify is supported
-                variable_data = self.get_grid_for_variable(config.variable.variable, time_index=time_index)
+                variable_data = self.get_grid_for_variable(config.variable, time_index=time_index)
 
                 cell_size = (
                     float(variable.full_extent.width) / variable_data.shape[1],
@@ -301,7 +305,7 @@ class IdentifyViewBase(NetCdfDatasetMixin, ServiceView):
                     int(float(geometry.x-variable.full_extent.xmin) / cell_size[0]),
                     int(float(geometry.y-variable.full_extent.ymin) / cell_size[1])
                 ]
-                if not self.is_y_increasing():
+                if not self.is_y_increasing(variable):
                     cell_index[1] = variable_data.shape[0] - cell_index[1] - 1
 
                 if variable_data.shape[1] > cell_index[0] >= 0 and variable_data.shape[0] > cell_index[1] >= 0:
