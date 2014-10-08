@@ -110,8 +110,8 @@ class TemporaryFileResource(ModelResource):
                 if dimension[0] in dataset_info.meta['variables']:
                     data['dimensions'][dimension[0]].update({
                         'attributes': dataset_info.meta['variables'][dimension[0]].get('attrs'),
-                        'min': self._convert_number(numpy.amin(dataset.variables[dimension[0]])),
-                        'max': self._convert_number(numpy.amax(dataset.variables[dimension[0]]))
+                        'min': self._convert_number(numpy.amin(dataset.variables[dimension[0]][:])),
+                        'max': self._convert_number(numpy.amax(dataset.variables[dimension[0]][:]))
                     })
 
             for variable in dataset_info.meta['variables'].items():
@@ -121,10 +121,13 @@ class TemporaryFileResource(ModelResource):
                     except (ValueError, CFException, KeyError):
                         variable_info = None
 
+                    variable_data = dataset.variables[variable[0]][:]
                     data['variables'][variable[0]] = {
                         'dimensions': list(variable[1].get('dimensions') or []),
                         'attributes': variable[1].get('attrs'),
-                        'proj4': variable_info.ds.spatial.crs.sr.ExportToProj4() if variable_info else None
+                        'proj4': variable_info.ds.spatial.crs.sr.ExportToProj4() if variable_info else None,
+                        'min': self._convert_number(numpy.min(variable_data)),
+                        'max': self._convert_number(numpy.max(variable_data))
                     }
 
                     if variable_info:

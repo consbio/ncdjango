@@ -156,7 +156,7 @@ class LayerDetailView(DetailView):
             'hasZ': False,
             'hasM': False,
             'copyrightText': None,
-            'parentLayer': -1,
+            'parentLayer': None,
             'subLayers': None,
             'minScale': 0,
             'maxScale': 0,
@@ -350,7 +350,7 @@ class LegendView(ArcGisMapServerMixin, LegendViewBase):
     def set_legend_sizes(self, configurations):
         for config in configurations:
             if isinstance(config.renderer, StretchedRenderer):
-                config.size = (30, 32)
+                config.size = (20, 60)
             elif isinstance(config.renderer, ClassifiedRenderer):
                 config.size = (20, 20)
             else:
@@ -363,10 +363,20 @@ class LegendView(ArcGisMapServerMixin, LegendViewBase):
             if len(elements) == 1 and len(elements[0].labels) > 1:
                 element = elements[0]
                 labels = element.labels
+
+                #Split into multiple images
+                full_image = element.image
+                top_image = Image.new('RGBA', (20, 20), color=(0, 0, 0, 0))
+                top_image.paste(full_image.crop((0, 0, 20, 20)))
+                middle_image = Image.new('RGBA', (20, 20), color=(0, 0, 0, 0))
+                middle_image.paste(full_image.crop((0, 20, 20, 40)))
+                bottom_image = Image.new('RGBA', (20, 20), color=(0, 0, 0, 0))
+                bottom_image.paste(full_image.crop((0, 40, 20, 60)))
+
                 elements = [
-                    LegendElement(None, [1], [labels[0]]),
-                    LegendElement(element.image, [.5], ['']),
-                    LegendElement(None, [0], [labels[-1]])
+                    LegendElement(top_image, [1], [labels[0]]),
+                    LegendElement(middle_image, [.5], ['']),
+                    LegendElement(bottom_image, [0], [labels[-1]])
                 ]
 
             return [
