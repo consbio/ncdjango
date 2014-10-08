@@ -22,7 +22,6 @@ def get_renderer_from_definition(config):
     renderer_kwargs = {
         'colormap': renderer_colors,
         'fill_value': fill_value,
-        'background_color': Color(255, 255, 255, 0)
     }
 
     if renderer_type == "stretched":
