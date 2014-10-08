@@ -6,6 +6,7 @@ from urllib.error import URLError
 from urllib.parse import unquote
 from PIL import Image
 from clover.geometry.bbox import BBox
+from clover.render.renderers.classified import ClassifiedRenderer
 from django.conf import settings
 from django.contrib.auth.decorators import login_required, permission_required
 from django.core.cache import get_cache
@@ -353,8 +354,12 @@ class LegendViewBase(NetCdfDatasetMixin, ServiceView):
             data = {}
 
             for config in configurations:
-                min_value = numpy.min(dataset.variables[config.variable.variable][:])
-                data[config.variable] = config.renderer.get_legend(*config.size, min_value=min_value)
+                kwargs = {}
+                if isinstance(config.renderer, ClassifiedRenderer):
+                    min_value = numpy.min(dataset.variables[config.variable.variable][:])
+                    kwargs['min_value'] = min_value
+
+                data[config.variable] = config.renderer.get_legend(*config.size)
 
             data, content_type = self.serialize_data(data)
             return self.create_response(request, data,content_type=content_type)
