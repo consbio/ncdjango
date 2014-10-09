@@ -75,7 +75,7 @@ def wkt_to_proj4(wkt):
     srs = osgeo.osr.SpatialReference()
     srs.ImportFromWkt(wkt)
 
-    return pyproj.Proj(srs.ExportToProj4())
+    return pyproj.Proj(str(srs.ExportToProj4()))
 
 
 def proj4_to_wkt(projection):
