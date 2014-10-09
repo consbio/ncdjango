@@ -3,7 +3,7 @@ import os
 import shutil
 import tempfile
 from six.moves.urllib.error import URLError
-from urllib.parse import unquote
+from six.moves.urllib.parse import unquote
 from PIL import Image
 from clover.geometry.bbox import BBox
 from clover.render.renderers.classified import ClassifiedRenderer
@@ -18,7 +18,7 @@ from django.views.decorators.csrf import csrf_exempt
 from django.views.generic import View
 import time
 import netCDF4
-from django.views.generic.edit import ProcessFormView, FormMixin, CreateView
+from django.views.generic.edit import ProcessFormView, FormMixin
 import numpy
 import pyproj
 from shapely.geometry import Point
