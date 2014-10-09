@@ -292,7 +292,9 @@ class IdentifyViewBase(NetCdfDatasetMixin, ServiceView):
                 else:
                     time_index = None
 
-                geometry = project_geometry(config.geometry, config.projection, pyproj.Proj(self.service.projection))
+                geometry = project_geometry(
+                    config.geometry, config.projection, pyproj.Proj(str(self.service.projection))
+                )
                 assert isinstance(geometry, Point)  # Only point-based identify is supported
                 variable_data = self.get_grid_for_variable(config.variable, time_index=time_index)
 

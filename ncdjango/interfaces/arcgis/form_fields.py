@@ -115,9 +115,9 @@ class SrField(forms.Field):
 
             # Well-known ids below 32767 have a corresponding EPSG
             if wkid < 32767:
-                return pyproj.Proj("+init=epsg:{}".format(wkid))
+                return pyproj.Proj('+init=epsg:{}'.format(wkid))
             elif wkid in wkid_to_proj:
-                return pyproj.Proj(wkid_to_proj[wkid])
+                return pyproj.Proj(str(wkid_to_proj[wkid]))
             else:
                 raise RuntimeError
         except ValueError:

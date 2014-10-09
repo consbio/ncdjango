@@ -21,7 +21,7 @@ class BoundingBoxField(with_metaclass(models.SubfieldBase, models.TextField)):
 
         try:
             data = json.loads(value)
-            projection = pyproj.Proj(data.get('proj4')) if data.get('proj4') else None
+            projection = pyproj.Proj(str(data.get('proj4'))) if data.get('proj4') else None
 
             return BBox(
                 (data['xmin'], data['ymin'], data['xmax'], data['ymax']), projection=projection

@@ -111,7 +111,7 @@ class ValuesAtPointView(DataViewBase):
 
     def handle_request(self, request, **kwargs):
         variable = self.get_variable()
-        form_params = {'projection': pyproj.Proj(variable.projection)}
+        form_params = {'projection': pyproj.Proj(str(variable.projection))}
         form_params.update(kwargs)
         form = self.form_class(form_params)
         if form.is_valid():
@@ -120,7 +120,7 @@ class ValuesAtPointView(DataViewBase):
             raise ConfigurationError
 
         point = project_geometry(
-            Point(form_data['x'], form_data['y']), form_data['projection'], pyproj.Proj(variable.projection)
+            Point(form_data['x'], form_data['y']), form_data['projection'], pyproj.Proj(str(variable.projection))
         )
         data = {'values': []}
         dataset = self.open_dataset(self.service)

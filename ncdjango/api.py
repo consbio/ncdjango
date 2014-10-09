@@ -211,7 +211,7 @@ class ServiceResource(ModelResource):
     def obj_create(self, bundle, **kwargs):
         bundle = super(ServiceResource, self).obj_create(bundle, **kwargs)
 
-        projection = pyproj.Proj(bundle.obj.projection)
+        projection = pyproj.Proj(str(bundle.obj.projection))
         bundle.obj.full_extent.projection = projection
         bundle.obj.initial_extent.projection = projection
         for variable in bundle.obj.variable_set.all():
@@ -307,6 +307,6 @@ class VariableResource(ModelResource):
         if not bundle.obj.projection:
             bundle.obj.projection = bundle.obj.service.projection
 
-        bundle.obj.full_extent.projection = pyproj.Proj(bundle.obj.projection)
+        bundle.obj.full_extent.projection = pyproj.Proj(str(bundle.obj.projection))
 
         return super(VariableResource, self).save(bundle, skip_errors=skip_errors)

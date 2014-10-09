@@ -58,7 +58,7 @@ class MapServiceDetailView(DetailView):
     slug_url_kwarg = 'service_name'
 
     def render_to_response(self, context, **response_kwargs):
-        epsg = proj4_to_epsg(pyproj.Proj(self.object.projection))
+        epsg = proj4_to_epsg(pyproj.Proj(str(self.object.projection)))
         if epsg:
             full_extent = self.object.full_extent
             initial_extent = self.object.initial_extent
@@ -250,8 +250,8 @@ class GetImageView(ArcGisMapServerMixin, GetImageViewBase):
             'bbox': self.service.full_extent,
             'size': '400,400',
             'dpi': 200,
-            'image_projection': pyproj.Proj(self.service.projection),
-            'bbox_projection': pyproj.Proj(self.service.projection),
+            'image_projection': pyproj.Proj(str(self.service.projection)),
+            'bbox_projection': pyproj.Proj(str(self.service.projection)),
             'image_format': 'png',
             'transparent': True
         }
@@ -303,7 +303,7 @@ class IdentifyView(ArcGisMapServerMixin, IdentifyViewBase):
         return {
             'response_format': 'html',
             'geometry_type': 'esriGeometryPoint',
-            'projection': pyproj.Proj(self.service.projection),
+            'projection': pyproj.Proj(str(self.service.projection)),
             'return_geometry': True,
             'maximum_allowable_offset': 2,
             'geometry_precision': 3,
