@@ -2,7 +2,7 @@ import json
 import os
 import shutil
 import tempfile
-from urllib.error import URLError
+from six.moves.urllib.error import URLError
 from urllib.parse import unquote
 from PIL import Image
 from clover.geometry.bbox import BBox
@@ -11,8 +11,7 @@ from django.conf import settings
 from django.contrib.auth.decorators import login_required, permission_required
 from django.core.cache import get_cache
 from django.core.files import File
-from django.core.files.storage import default_storage
-from django.http.response import HttpResponseBadRequest, HttpResponse, HttpResponseForbidden
+from django.http.response import HttpResponseBadRequest, HttpResponse
 from django.shortcuts import get_object_or_404
 from django.utils.decorators import method_decorator
 from django.views.decorators.csrf import csrf_exempt
