@@ -139,7 +139,7 @@ class GeoImage(object):
 def world_to_image(bbox, size):
     """Function generator to create functions for converting from world coordinates to image coordinates"""
 
-    px_per_unit = (float(size[0])/bbox.width, float(size[1]/bbox.height))
+    px_per_unit = (float(size[0])/bbox.width, float(size[1])/bbox.height)
     return lambda x,y: ((x-bbox.xmin) * px_per_unit[0], size[1] - (y-bbox.ymin)*px_per_unit[1])
 
 
