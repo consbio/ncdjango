@@ -154,6 +154,10 @@ class TemporaryFileResource(ModelResource):
                             })
                         except (OcgException, CFException):
                             pass
+                    else:
+                        variable_info = dataset.variables[variable[0]]
+                        if 'proj4' in variable_info.ncattrs():
+                            data['variables'][variable[0]]['proj4'] = variable_info.proj4
 
             bundle.data = data
             return self.create_response(request, bundle)
