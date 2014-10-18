@@ -144,7 +144,7 @@ class TemporaryFileResource(ModelResource):
                                     )
                                 }
                             })
-                        except (OcgException, CFException):
+                        except (ValueError, OcgException, CFException):
                             pass
 
                         try:
