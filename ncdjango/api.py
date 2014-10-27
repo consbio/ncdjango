@@ -1,20 +1,17 @@
 import logging
-from netCDF4 import Dataset
 import os
 import shutil
 from tempfile import mkdtemp
 from zipfile import ZipFile
 
 from clover.geometry.bbox import BBox
+from clover.netcdf.describe import describe
 from django.conf.urls import url
 from django.core.exceptions import ObjectDoesNotExist
 from django.core.files.base import File
 from django.core.files.storage import default_storage
 from django.db.transaction import atomic
 from django.utils.six import BytesIO
-import numpy
-from ocgis import Inspect
-from ocgis.exc import OcgException, CFException
 import pyproj
 from tastypie import fields
 from tastypie.authentication import SessionAuthentication, MultiAuthentication, ApiKeyAuthentication
@@ -94,72 +91,8 @@ class TemporaryFileResource(ModelResource):
             else:
                 raise ImmediateHttpResponse(HttpBadRequest('Unsupported file format.'))
 
-            dataset_info = Inspect(dataset_path)
-            dataset = Dataset(dataset_path)
-            data = {
-                'dimensions': {},
-                'variables': {}
-            }
+            bundle.data = describe(dataset_path)
 
-            for dimension in dataset_info.meta['dimensions'].items():
-                data['dimensions'][dimension[0]] = {
-                    'length': dimension[1].get('len'),
-                    'is_unlimited': dimension[1].get('isunlimited', False)
-                }
-
-                if dimension[0] in dataset_info.meta['variables']:
-                    data['dimensions'][dimension[0]].update({
-                        'attributes': dataset_info.meta['variables'][dimension[0]].get('attrs'),
-                        'min': self._convert_number(numpy.amin(dataset.variables[dimension[0]][:])),
-                        'max': self._convert_number(numpy.amax(dataset.variables[dimension[0]][:]))
-                    })
-
-            for variable in dataset_info.meta['variables'].items():
-                if variable[0] not in data['dimensions'] and len(variable[1].get('dimensions', [])) >= 2:
-                    try:
-                        variable_info = Inspect(dataset_path, variable=variable[0])
-                    except (ValueError, CFException, KeyError):
-                        variable_info = None
-
-                    variable_data = dataset.variables[variable[0]][:]
-                    data['variables'][variable[0]] = {
-                        'dimensions': list(variable[1].get('dimensions') or []),
-                        'attributes': variable[1].get('attrs'),
-                        'proj4': variable_info.ds.spatial.crs.sr.ExportToProj4() if variable_info else None,
-                        'min': self._convert_number(numpy.min(variable_data)),
-                        'max': self._convert_number(numpy.max(variable_data))
-                    }
-
-                    if variable_info:
-                        try:
-                            data['variables'][variable[0]].update({
-                                'time': {
-                                    'extent': [x.isoformat(' ') for x in variable_info.ds.temporal.extent_datetime],
-                                    'calendar': variable_info.ds.temporal.calendar,
-                                    'units': variable_info.ds.temporal.units,
-                                    'count': variable_info.ds.temporal.shape[0],
-                                    'resolution': (
-                                        int(variable_info.ds.temporal.resolution) if
-                                        variable_info.ds.temporal.resolution else None
-                                    )
-                                }
-                            })
-                        except (ValueError, OcgException, CFException):
-                            pass
-
-                        try:
-                            data['variables'][variable[0]].update({
-                                'extent': [self._convert_number(x) for x in variable_info.ds.spatial.grid.extent or []],
-                                'resolution': variable_info.ds.spatial.grid.resolution
-                            })
-                        except (OcgException, CFException):
-                            pass
-
-                    dataset_variable = dataset.variables[variable[0]]
-                    if 'proj4' in dataset_variable.ncattrs():
-                        data['variables'][variable[0]]['proj4'] = dataset_variable.proj4
-
-            bundle.data = data
             return self.create_response(request, bundle)
 
         finally:
