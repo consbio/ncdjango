@@ -374,9 +374,9 @@ class LegendView(ArcGisMapServerMixin, LegendViewBase):
                 bottom_image.paste(full_image.crop((0, 40, 20, 60)))
 
                 elements = [
-                    LegendElement(top_image, [1], [labels[0]]),
+                    LegendElement(top_image, [1], [labels[-1]]),
                     LegendElement(middle_image, [.5], ['']),
-                    LegendElement(bottom_image, [0], [labels[-1]])
+                    LegendElement(bottom_image, [0], [labels[0]])
                 ]
 
             return [
