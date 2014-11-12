@@ -1,3 +1,4 @@
+import calendar
 from datetime import timedelta
 import logging
 import uuid
@@ -103,10 +104,13 @@ class Variable(models.Model):
 
                 next_value = lambda x: x.replace(year=x.year + years)
             elif units == 'months':
-                next_value = lambda x: x.replace(
-                    year=x.year + (x.month+interval-1) // 12,
-                    month=(x.month+interval) % 12 or 12
-                )
+                def _fn(x):
+                    year = x.year + (x.month+interval-1) // 12
+                    month = (x.month+interval) % 12 or 12
+                    day = min(x.day, calendar.monthrange(year, month)[1])
+
+                    return x.replace(year=year, month=month, day=day)
+                next_value = _fn
             else:
                 if units == 'milliseconds':
                     delta = timedelta(milliseconds=interval)
