@@ -32,7 +32,7 @@ def auto_memoize(func):
 def best_fit(li, value):
     """For a sorted list li, returns the closest item to value"""
 
-    index = bisect_left(li, value)
+    index = min(bisect_left(li, value), len(li) - 1)
 
     if index in (0, len(li)):
         return index
