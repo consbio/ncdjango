@@ -2,6 +2,7 @@ import json
 from django.conf import settings
 from django.http import HttpResponse
 from django.shortcuts import get_object_or_404
+import math
 import numpy
 import pyproj
 from shapely.geometry.point import Point
@@ -158,8 +159,11 @@ class ValuesAtPointView(DataViewBase):
 
             if variable_data.shape[1] > cell_index[0] >= 0 and variable_data.shape[0] > cell_index[1] >= 0:
                 variable_data = variable_data[cell_index[1], cell_index[0]]
-                data['values'] = [int(x) if float(x).is_integer() else float(x) for x in variable_data]
+                data['values'] = [
+                    None if math.isnan(x) else x for x in
+                    (int(x) if float(x).is_integer() else float(x) for x in variable_data)
+                ]
 
-            return HttpResponse(json.dumps(data))
+            return HttpResponse(json.dumps(data), content_type='application/json')
         finally:
             self.close_dataset()
