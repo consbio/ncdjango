@@ -98,7 +98,11 @@ class UniqueValuesView(DataViewBase):
             }
             if len(unique_data) > MAX_UNIQUE_VALUES:
                 unique_data = unique_data[:MAX_UNIQUE_VALUES]
-            data['values'] = [int(x) if float(x).is_integer() else float(x) for x in unique_data]
+            data['values'] = [
+                x for x in
+                (int(x) if float(x).is_integer() else float(x) for x in unique_data)
+                if not math.isnan(x)
+            ]
 
             return HttpResponse(json.dumps(data))
         finally:

@@ -52,24 +52,25 @@ class RasterRendererField(with_metaclass(models.SubfieldBase, models.TextField))
         try:
             data = json.loads(value)
             name = data['name']
+            params = data.get('params', {})
             kwargs = {
                 'colormap': [(c[0], Color(*c[1])) for c in data['colormap']],
-                'fill_value': data.get('fill_value'),
-                'background_color': data.get('background_color')
+                'fill_value': params.get('fill_value'),
+                'background_color': params.get('background_color')
             }
 
             if name == "stretched":
                 cls = StretchedRenderer
                 kwargs.update({
-                    'method': data.get('method', 'linear'),
-                    'colorspace': data.get('colorspace', 'hsv')
+                    'method': params.get('method', 'linear'),
+                    'colorspace': params.get('colorspace', 'hsv')
                 })
             elif name == "classified":
                 cls = ClassifiedRenderer
             elif name == "unique":
                 cls = UniqueValuesRenderer
                 kwargs.update({
-                    'labels': data['labels']
+                    'labels': params.get('labels')
                 })
         except (ValueError, KeyError):
             raise ValidationError("")
