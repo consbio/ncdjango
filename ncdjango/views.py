@@ -23,6 +23,7 @@ import numpy
 import pyproj
 from shapely.geometry import Point
 import six
+import struct
 from ncdjango.exceptions import ConfigurationError
 from ncdjango.forms import TemporaryFileForm
 from ncdjango.geoimage import GeoImage
@@ -132,12 +133,18 @@ class GetImageViewBase(NetCdfDatasetMixin, ServiceView):
     """Base view for handling image render requests. This view is implemented by specific interfaces."""
 
     def _image_to_cache(self, image):
-        buffer = six.BytesIO()
-        image.save(buffer, "png")
-        return buffer.getvalue()
+        return image
+        return struct.pack('II', *image.size) + image.tobytes()
 
     def _cache_to_image(self, bytes):
-        return Image.open(six.BytesIO(bytes))
+        return bytes
+        start = time.time()
+        try:
+            size = struct.unpack('II', bytes[:8])
+            return Image.frombytes('RGBA', size, bytes[8:])
+        finally:
+            print('Image from cache in {0:.3} seconds'.format(time.time() - start))
+
 
     def _normalize_bbox(self, bbox, size):
         """Returns this bbox normalized to match the ratio of the given size."""
@@ -211,7 +218,9 @@ class GetImageViewBase(NetCdfDatasetMixin, ServiceView):
             if hasattr(data, 'fill_value'):
                 config.renderer.fill_value = data.fill_value
 
+            start = time.time()
             image = config.renderer.render_image(data, row_major_order=self.is_row_major(variable))
+            print('Rendered layer in {:.3f} seconds'.format(time.time()-start))
 
             #  If y values are increasing, the rendered image needs to be flipped vertically
             if self.is_y_increasing(variable):
@@ -239,7 +248,9 @@ class GetImageViewBase(NetCdfDatasetMixin, ServiceView):
 
             for config in reversed(configurations):
                 image = GeoImage(self.get_full_extent_image(config), config.variable.full_extent)
+                start = time.time()
                 final_image.paste(image.warp(extent, size).image, None)
+                print('Warp completed in {:.3f} seconds'.format(time.time() - start))
 
             final_image, content_type = self.format_image(final_image, base_config.image_format)
 
