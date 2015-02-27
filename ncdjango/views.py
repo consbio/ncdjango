@@ -260,7 +260,7 @@ class GetImageViewBase(NetCdfDatasetMixin, ServiceView):
             final_image = Image.new('RGBA', size, base_config.background_color.to_tuple())
 
             for config in reversed(configurations):
-                native_extent = extent.project(pyproj.Proj(config.variable.projection))
+                native_extent = extent.project(pyproj.Proj(str(config.variable.projection)))
                 chunked_grid = ChunkedGrid(
                     self.get_grid_spatial_dimensions(config.variable), config.variable.full_extent,
                     self.is_y_increasing(config.variable)
