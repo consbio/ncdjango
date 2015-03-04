@@ -38,27 +38,26 @@ class ChunkedGrid(object):
             float(self.bbox.width) / float(self.grid_dimensions[0]),
             float(self.bbox.height) / float(self.grid_dimensions[1])
         )
-        bbox_x_stride = float(self.bbox.width)/float(x_count)
-        bbox_y_stride = float(self.bbox.height)/float(y_count)
 
         for i in range(y_count):
+            y_min = self.max_chunk_dimensions[1] * i
+            y_max = min(y_min + self.max_chunk_dimensions[1], self.grid_dimensions[1])
+            height = y_max - y_min
+
+            if self.is_y_increasing:
+                bbox_y_min = self.bbox.ymin + y_min*cell_size[1]
+                bbox_y_max = bbox_y_min + height*cell_size[1]
+            else:
+                bbox_y_max = self.bbox.ymax - y_min*cell_size[1]
+                bbox_y_min = bbox_y_max - height*cell_size[1]
+
             for j in range(x_count):
                 x_min = self.max_chunk_dimensions[0] * j
-                y_min = self.max_chunk_dimensions[1] * i
                 x_max = min(x_min + self.max_chunk_dimensions[0], self.grid_dimensions[0])
-                y_max = min(y_min + self.max_chunk_dimensions[1], self.grid_dimensions[1])
                 width = x_max - x_min
-                height = y_max - y_min
 
                 bbox_x_min = self.bbox.xmin + x_min*cell_size[0]
-                bbox_x_max = bbox_x_min + (width+1)*cell_size[0]
-
-                if self.is_y_increasing:
-                    bbox_y_min = self.bbox.ymin + y_min*cell_size[1]
-                    bbox_y_max = bbox_y_min + (height+1)*cell_size[1]
-                else:
-                    bbox_y_max = self.bbox.ymax - y_min*cell_size[1]
-                    bbox_y_min = bbox_y_max - (height+1)*cell_size[1]
+                bbox_x_max = bbox_x_min + width*cell_size[0]
 
                 bbox = BBox((bbox_x_min, bbox_y_min, bbox_x_max, bbox_y_max), projection=self.bbox.projection)
 
