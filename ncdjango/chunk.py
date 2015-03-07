@@ -17,6 +17,10 @@ class Chunk(object):
         self.y_max = y_max
         self.bbox = bbox
 
+    @property
+    def dimensions(self):
+        return (self.x_max - self.x_min, self.y_max - self.y_min)
+
 
 class ChunkedGrid(object):
     """
