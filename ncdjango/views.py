@@ -109,8 +109,9 @@ class NetCdfDatasetMixin(object):
                     slices.append(slice(*x_slice))
                 elif y_slice and dimension == variable.y_dimension:
                     slices.append(slice(*y_slice))
-                elif dimension == variable.time_dimension:
-                    slices.append()
+                elif dimension == variable.time_dimension and time_index is not None:
+                    slices.append(time_index)
+                    dimensions.remove(dimension)
                 else:
                     slices.append(slice(None))
             else:
@@ -120,8 +121,6 @@ class NetCdfDatasetMixin(object):
         data = data[tuple(slices)]
 
         transpose_args = [dimensions.index(variable.y_dimension), dimensions.index(variable.x_dimension)]
-        if time_index is not None:
-            transpose_args.append(dimensions.index(variable.time_dimension))
         data = data.transpose(*transpose_args)
 
         return data
@@ -233,7 +232,7 @@ class GetImageViewBase(NetCdfDatasetMixin, ServiceView):
             if hasattr(data, 'fill_value'):
                 config.renderer.fill_value = data.fill_value
 
-            image = config.renderer.render_image(data, row_major_order=self.is_row_major(variable))
+            image = config.renderer.render_image(data, row_major_order=self.is_row_major(variable)).convert('RGBA')
 
             #  If y values are increasing, the rendered image needs to be flipped vertically
             if self.is_y_increasing(variable):
