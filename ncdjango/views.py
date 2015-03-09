@@ -224,11 +224,21 @@ class GetImageViewBase(NetCdfDatasetMixin, ServiceView):
                 )
 
                 grid_bounds = [
-                    max(int(math.floor(float(native_extent.xmin-config.variable.full_extent.xmin) / cell_size[0])), 0),
-                    max(int(math.floor(float(native_extent.ymin-config.variable.full_extent.ymin) / cell_size[1])), 0),
-                    min(int(math.ceil(float(native_extent.xmax-config.variable.full_extent.xmin) / cell_size[0])), dimensions[0]),
-                    min(int(math.ceil(float(native_extent.ymax-config.variable.full_extent.ymin) / cell_size[1])), dimensions[1])
+                    int(math.floor(float(native_extent.xmin-config.variable.full_extent.xmin) / cell_size[0])),
+                    int(math.floor(float(native_extent.ymin-config.variable.full_extent.ymin) / cell_size[1])),
+                    int(math.ceil(float(native_extent.xmax-config.variable.full_extent.xmin) / cell_size[0])),
+                    int(math.ceil(float(native_extent.ymax-config.variable.full_extent.ymin) / cell_size[1]))
                 ]
+
+                grid_bounds = [
+                    min(max(grid_bounds[0], 0), dimensions[0]),
+                    min(max(grid_bounds[1], 0), dimensions[1]),
+                    min(max(grid_bounds[2], 0), dimensions[0]),
+                    min(max(grid_bounds[3], 0), dimensions[1])
+                ]
+
+                if not (grid_bounds[2] - grid_bounds[0] and grid_bounds[3] - grid_bounds[1]):
+                    continue
 
                 grid_extent = BBox((
                     config.variable.full_extent.xmin + grid_bounds[0]*cell_size[0],
