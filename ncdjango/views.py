@@ -1,4 +1,5 @@
 import json
+import math
 import os
 import shutil
 import tempfile
@@ -7,35 +8,24 @@ from six.moves.urllib.parse import unquote
 from PIL import Image
 from clover.geometry.bbox import BBox
 from clover.render.renderers.classified import ClassifiedRenderer
-from django.conf import settings
 from django.contrib.auth.decorators import login_required, permission_required
-from django.core.cache import get_cache
 from django.core.files import File
 from django.http.response import HttpResponseBadRequest, HttpResponse
 from django.shortcuts import get_object_or_404
 from django.utils.decorators import method_decorator
 from django.views.decorators.csrf import csrf_exempt
 from django.views.generic import View
-import time
 import netCDF4
 from django.views.generic.edit import ProcessFormView, FormMixin
 import numpy
 import pyproj
 from shapely.geometry import Point
 import six
-from ncdjango.chunk import ChunkedGrid
 from ncdjango.exceptions import ConfigurationError
 from ncdjango.forms import TemporaryFileForm
 from ncdjango.geoimage import GeoImage
 from ncdjango.models import Service, SERVICE_DATA_ROOT, TemporaryFile
-from ncdjango.utils import project_geometry, proj4_to_wkt
-
-CACHE_NATIVE_IMAGE = getattr(settings, 'NC_CACHE_NATIVE', False)
-NATIVE_IMAGE_CACHE = getattr(settings, 'NC_NATIVE_IMAGE_CACHE', 'default')
-NATIVE_IMAGE_CACHE_TIMEOUT = getattr(settings, 'NC_NATIVE_IMAGE_CACHE_TIMEOUT', 60)
-
-NATIVE_CHUNK_CACHE_KEY = "ncdjango_full_extent_{hash}_{x}_{y}"
-NATIVE_CHUNK_PENDING_KEY = "ncdjango_full_extent_pending_{hash}_{x}_{y}"
+from ncdjango.utils import project_geometry
 
 
 class ServiceView(View):
@@ -148,14 +138,6 @@ class NetCdfDatasetMixin(object):
 class GetImageViewBase(NetCdfDatasetMixin, ServiceView):
     """Base view for handling image render requests. This view is implemented by specific interfaces."""
 
-    def _image_to_cache(self, image):
-        buffer = six.BytesIO()
-        image.save(buffer, "png")
-        return buffer.getvalue()
-
-    def _cache_to_image(self, bytes):
-        return Image.open(six.BytesIO(bytes))
-
     def _normalize_bbox(self, bbox, size):
         """Returns this bbox normalized to match the ratio of the given size."""
 
@@ -196,56 +178,30 @@ class GetImageViewBase(NetCdfDatasetMixin, ServiceView):
 
         return HttpResponse(content=image, content_type=content_type)
 
-    def get_chunk_image(self, config, chunk):
-        if CACHE_NATIVE_IMAGE:
-            config_hash = config.hash
-            chunk_image_key = NATIVE_CHUNK_CACHE_KEY.format(hash=config_hash, x=chunk.x_index, y=chunk.y_index)
-            chunk_pending_key = NATIVE_CHUNK_PENDING_KEY.format(hash=config_hash, x=chunk.x_index, y=chunk.y_index)
-            cache = get_cache(NATIVE_IMAGE_CACHE)
-            cache_wait_start = time.time()
+    def get_image(self, config, grid_bounds):
+        variable = config.variable
+        service = variable.service
 
-            while time.time() - cache_wait_start < NATIVE_IMAGE_CACHE_TIMEOUT:
-                image = cache.get(chunk_image_key)
-                if image:
-                    return self._cache_to_image(image)  # The chunk has already been rendered
-                elif cache.get(chunk_pending_key):
-                    time.sleep(0.1)  # The chunk render is pending; wait and try again
-                    continue
-                else:
-                    break  # No image for this chunk and no render pending
-            cache.set(chunk_pending_key, True)
+        if service.supports_time and variable.supports_time:
+            time_index = config.time_index or 0
+        else:
+            time_index = None
 
-        try:
-            variable = config.variable
-            service = variable.service
+        data = self.get_grid_for_variable(
+            variable, time_index=time_index, x_slice=(grid_bounds[0], grid_bounds[2]),
+            y_slice=(grid_bounds[1], grid_bounds[3])
+        )
 
-            if service.supports_time and variable.supports_time:
-                time_index = config.time_index or 0
-            else:
-                time_index = None
+        if hasattr(data, 'fill_value'):
+            config.renderer.fill_value = data.fill_value
 
-            data = self.get_grid_for_variable(
-                variable, time_index=time_index, x_slice=(chunk.x_min, chunk.x_max),
-                y_slice=(chunk.y_min, chunk.y_max)
-            )
+        image = config.renderer.render_image(data, row_major_order=self.is_row_major(variable)).convert('RGBA')
 
-            if hasattr(data, 'fill_value'):
-                config.renderer.fill_value = data.fill_value
+        #  If y values are increasing, the rendered image needs to be flipped vertically
+        if self.is_y_increasing(variable):
+            image = image.transpose(Image.FLIP_TOP_BOTTOM)
 
-            image = config.renderer.render_image(data, row_major_order=self.is_row_major(variable)).convert('RGBA')
-
-            #  If y values are increasing, the rendered image needs to be flipped vertically
-            if self.is_y_increasing(variable):
-                image = image.transpose(Image.FLIP_TOP_BOTTOM)
-
-            if CACHE_NATIVE_IMAGE:
-                cache.set(chunk_image_key, self._image_to_cache(image))
-
-            return image
-
-        finally:
-            if CACHE_NATIVE_IMAGE:
-                cache.delete(chunk_pending_key)
+        return image
 
     def handle_request(self, request, **kwargs):
         try:
@@ -260,21 +216,36 @@ class GetImageViewBase(NetCdfDatasetMixin, ServiceView):
 
             for config in reversed(configurations):
                 native_extent = extent.project(pyproj.Proj(str(config.variable.projection)))
-                chunked_grid = ChunkedGrid(
-                    self.get_grid_spatial_dimensions(config.variable), config.variable.full_extent,
-                    self.is_y_increasing(config.variable)
+                dimensions = self.get_grid_spatial_dimensions(config.variable)
+
+                cell_size = (
+                    float(config.variable.full_extent.width) / dimensions[0],
+                    float(config.variable.full_extent.height) / dimensions[1]
                 )
 
-                for chunk in chunked_grid.chunks():
-                    intersects = (
-                        chunk.bbox.xmin < native_extent.xmax and chunk.bbox.xmax > native_extent.xmin and
-                        chunk.bbox.ymin < native_extent.ymax and chunk.bbox.ymax > native_extent.ymin
-                    )
+                grid_bounds = [
+                    max(int(math.floor(float(native_extent.xmin-config.variable.full_extent.xmin) / cell_size[0])), 0),
+                    max(int(math.floor(float(native_extent.ymin-config.variable.full_extent.ymin) / cell_size[1])), 0),
+                    min(int(math.ceil(float(native_extent.xmax-config.variable.full_extent.xmin) / cell_size[0])), dimensions[0]),
+                    min(int(math.ceil(float(native_extent.ymax-config.variable.full_extent.ymin) / cell_size[1])), dimensions[1])
+                ]
 
-                    if intersects:
-                        image = GeoImage(self.get_chunk_image(config, chunk), chunk.bbox)
-                        warped = image.warp(extent, size).image
-                        final_image.paste(warped, None, warped)
+                grid_extent = BBox((
+                    config.variable.full_extent.xmin + grid_bounds[0]*cell_size[0],
+                    config.variable.full_extent.ymin + grid_bounds[1]*cell_size[1],
+                    config.variable.full_extent.xmin + grid_bounds[2]*cell_size[0],
+                    config.variable.full_extent.ymin + grid_bounds[3]*cell_size[1]
+                ), native_extent.projection)
+
+                if not self.is_y_increasing(config.variable):
+                    y_max = dimensions[1] - grid_bounds[1]
+                    y_min = dimensions[1] - grid_bounds[3]
+                    grid_bounds[1] = y_min
+                    grid_bounds[3] = y_max
+
+                image = GeoImage(self.get_image(config, grid_bounds), grid_extent)
+                warped = image.warp(extent, size).image
+                final_image.paste(warped, None, warped)
 
             final_image, content_type = self.format_image(final_image, base_config.image_format)
 
