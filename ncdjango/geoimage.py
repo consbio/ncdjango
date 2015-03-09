@@ -3,7 +3,7 @@ from django.conf import settings
 import math
 import pyproj
 
-MAX_MESH_DEPTH = getattr(settings, 'NC_WARP_MAX_DEPTH', 3)
+MAX_MESH_DEPTH = getattr(settings, 'NC_WARP_MAX_DEPTH', 5)
 PROJECTION_THRESHOLD = getattr(settings, 'NC_WARP_PROJECTION_THRESHOLD', 1.5)  # Warp tolerance in pixels
 
 
@@ -60,20 +60,20 @@ class GeoImage(object):
         if difference > PROJECTION_THRESHOLD and depth < MAX_MESH_DEPTH:
             return (
                 self._get_mesh_piece(
-                    (bounds[0], bounds[1], target_midpoint_px[0], target_midpoint_px[1]), target_projection, to_target_world,
-                    to_target_image, to_source_image, depth+1
+                    (bounds[0], bounds[1], target_midpoint_px[0], target_midpoint_px[1]), target_projection,
+                    to_target_world, to_target_image, to_source_image, depth+1
                 ) +
                 self._get_mesh_piece(
-                    (target_midpoint_px[0], bounds[1], bounds[2], target_midpoint_px[1]), target_projection, to_target_world,
-                    to_target_image, to_source_image, depth+1
+                    (target_midpoint_px[0], bounds[1], bounds[2], target_midpoint_px[1]), target_projection,
+                    to_target_world, to_target_image, to_source_image, depth+1
                 ) +
                 self._get_mesh_piece(
-                    (bounds[0], target_midpoint_px[1], target_midpoint_px[0], bounds[3]), target_projection, to_target_world,
-                    to_target_image, to_source_image, depth+1
+                    (bounds[0], target_midpoint_px[1], target_midpoint_px[0], bounds[3]), target_projection,
+                    to_target_world, to_target_image, to_source_image, depth+1
                 ) +
                 self._get_mesh_piece(
-                    (target_midpoint_px[0], target_midpoint_px[1], bounds[2], bounds[3]), target_projection, to_target_world,
-                    to_target_image, to_source_image, depth+1
+                    (target_midpoint_px[0], target_midpoint_px[1], bounds[2], bounds[3]), target_projection,
+                    to_target_world, to_target_image, to_source_image, depth+1
                 )
             )
         else:
@@ -114,7 +114,9 @@ class GeoImage(object):
             min(mesh_bounds[3], target_size[1])
         ]
 
-        return self._get_mesh_piece(mesh_bounds, target_bbox.projection, to_target_world, to_target_image, to_source_image)
+        return self._get_mesh_piece(
+            mesh_bounds, target_bbox.projection, to_target_world, to_target_image, to_source_image
+        )
 
     def warp(self, target_bbox, target_size=None):
         """Returns a copy of this image warped to a target size and bounding box"""
