@@ -45,7 +45,7 @@ class GeoImage(object):
         height = bounds[3] - bounds[1]
         target_midpoint_px = (bounds[2] - width/2.0, bounds[3] - height/2.0)
 
-        # Midpoind in source world projected to target pixel space
+        # Midpoint in source world projected to target pixel space
         width = source_quad[4] - source_quad[0]
         height = source_quad[5] - source_quad[1]
         source_midpoint = (source_quad[4] - width/2.0, source_quad[5] - height/2.0)
