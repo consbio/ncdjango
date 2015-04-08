@@ -1,5 +1,6 @@
 import json
 import math
+import mimetypes
 import os
 import shutil
 import tempfile
@@ -110,7 +111,7 @@ class NetCdfDatasetMixin(object):
 
         data = data[tuple(slices)]
 
-        transpose_args = [dimensions.index(variable.y_dimension), dimensions.index(variable.x_dimension)]
+        transpose_args = [data.dimensions.index(variable.y_dimension), data.dimensions.index(variable.x_dimension)]
         data = data.transpose(*transpose_args)
 
         return data
@@ -123,12 +124,9 @@ class NetCdfDatasetMixin(object):
         return data.shape[dimensions.index(variable.x_dimension)], data.shape[dimensions.index(variable.y_dimension)]
 
     def is_row_major(self, variable):
-        netcdf_variable = self.open_dataset(self.service).variables[variable.variable]
-        return (
-            netcdf_variable.dimensions.index(
-                variable.y_dimension) < netcdf_variable.dimensions.index(variable.x_dimension
-            )
-        )
+        data = self.open_dataset(self.service).variables[variable.variable]
+        dimensions = list(data.dimensions)
+        return dimensions.index(variable.y_dimension) < dimensions.index(variable.x_dimension)
 
     def is_y_increasing(self, variable):
         y_variable = self.open_dataset(self.service).variables.get(variable.y_dimension)
@@ -458,3 +456,17 @@ class TemporaryFileUploadUrlView(TemporaryFileUploadViewBase):
             return self.process_temporary_file(self.download_file(request.POST.get('url')))
         else:
             return self.get(request)
+
+
+class TemporaryFileDownloadView(View):
+    @method_decorator(login_required)
+    @method_decorator(permission_required('ncdjango.download_temporaryfile'))
+    @method_decorator(csrf_exempt)
+    def dispatch(self, request, *args, **kwargs):
+        return super(TemporaryFileDownloadView, self).dispatch(request, *args, **kwargs)
+
+    def get(self, request, uuid):
+        tmp_file = get_object_or_404(TemporaryFile, uuid=uuid)
+        tmp_file.file.open('rb')
+
+        return HttpResponse(tmp_file.file, content_type=mimetypes.guess_type(tmp_file.filename))
