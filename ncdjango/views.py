@@ -92,6 +92,7 @@ class NetCdfDatasetMixin(object):
             valid_dimensions = (variable.time_dimension,) + valid_dimensions
 
         dimensions = list(data.dimensions)
+        orig_dimensions = data.dimensions
         slices = []
 
         for dimension in data.dimensions:
@@ -111,7 +112,7 @@ class NetCdfDatasetMixin(object):
 
         data = data[tuple(slices)]
 
-        transpose_args = [data.dimensions.index(variable.y_dimension), data.dimensions.index(variable.x_dimension)]
+        transpose_args = [orig_dimensions.index(variable.y_dimension), orig_dimensions.index(variable.x_dimension)]
         data = data.transpose(*transpose_args)
 
         return data
