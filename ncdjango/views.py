@@ -432,8 +432,8 @@ class TemporaryFileUploadUrlView(TemporaryFileUploadViewBase):
             return HttpResponseBadRequest(e.reason)
 
     def download_file(self, url):
-        filename = url.split('?', 1)[0].split('/')[-1]
         url_f = six.moves.urllib.request.urlopen(url)
+        filename = url_f.info().get_filename()
         f = tempfile.TemporaryFile()
         shutil.copyfileobj(url_f, f)
 
