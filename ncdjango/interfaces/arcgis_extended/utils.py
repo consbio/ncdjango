@@ -43,6 +43,32 @@ def get_renderer_from_definition(config):
     return renderer
 
 
+def get_definition_from_renderer(renderer):
+    """Returns a dictionary definition of the given renderer"""
+
+    config = {
+        'colors': [[x[0], x[1].to_hex()] for x in renderer.colormap],
+        'options': {}
+    }
+
+    if renderer.fill_value:
+        config['options']['fill_value'] = renderer.fill_value.to_hex()
+
+    if isinstance(renderer, StretchedRenderer):
+        config['type'] = 'stretched'
+        config['options']['color_space'] = renderer.colorspace
+    elif isinstance(renderer, UniqueValuesRenderer):
+        config['type'] = 'unique'
+        if renderer.labels:
+            config['options']['labels'] = renderer.labels
+    elif isinstance(renderer, ClassifiedRenderer):
+        config['type'] = 'classified'
+    else:
+        raise ValueError('{0} is not a valid renderer type'.format(renderer.__class__.__name__))
+
+    return config
+
+
 def hex_to_color(value):
     try:
         if value[0] == '#':
