@@ -190,7 +190,7 @@ class GetImageViewBase(NetCdfDatasetMixin, ServiceView):
             y_slice=(grid_bounds[1], grid_bounds[3])
         )
 
-        if hasattr(data, 'fill_value'):
+        if config.renderer.fill_value is None and hasattr(data, 'fill_value'):
             config.renderer.fill_value = data.fill_value
 
         image = config.renderer.render_image(data, row_major_order=self.is_row_major(variable)).convert('RGBA')

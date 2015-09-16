@@ -99,8 +99,8 @@ class RasterRendererField(with_metaclass(models.SubfieldBase, models.TextField))
         else:
             raise ValidationError("")
 
-        if value.fill_value:
-            params['fill_value'] = value.background_color.to_tuple()
+        if value.fill_value is not None:
+            params['fill_value'] = value.fill_value
         if value.background_color:
             params['background_color'] = value.background_color.to_tuple()
 
