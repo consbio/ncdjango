@@ -11,7 +11,7 @@ from django.views.generic.detail import DetailView
 from django.views.generic.list import ListView
 import pyproj
 import six
-from ncdjango.config import RenderConfiguration, IdentifyConfiguration, LegendConfiguration
+from ncdjango.config import RenderConfiguration, IdentifyConfiguration, LegendConfiguration, ImageConfiguration
 from ncdjango.exceptions import ConfigurationError
 from ncdjango.interfaces.arcgis.forms import GetImageForm, IdentifyForm
 from ncdjango.interfaces.arcgis.utils import date_to_timestamp, extent_to_envelope
@@ -282,16 +282,14 @@ class GetImageView(ArcGISMapServerMixin, GetImageViewBase):
         data = self.process_form_data(self._get_form_defaults(), kwargs)
         variable_set = self.get_variable_set(self.service.variable_set.order_by('index'), data)
 
-        config_params = {
-            'extent': data['bbox'],
-            'size': data['size'],
-            'image_format': data['image_format'],
-            'background_color': TRANSPARENT_BACKGROUND_COLOR if data.get('transparent') else DEFAULT_BACKGROUND_COLOR
-        }
-
-        return self.apply_time_to_configurations(
-            [RenderConfiguration(v, **config_params) for v in variable_set], data
+        base_config = ImageConfiguration(
+            extent=data['bbox'],
+            size=data['size'],
+            image_format=data['image_format'],
+            background_color=TRANSPARENT_BACKGROUND_COLOR if data.get('transparent') else DEFAULT_BACKGROUND_COLOR
         )
+
+        return base_config, self.apply_time_to_configurations([RenderConfiguration(v) for v in variable_set], data)
 
 
 class IdentifyView(ArcGISMapServerMixin, IdentifyViewBase):

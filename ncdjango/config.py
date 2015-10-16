@@ -8,6 +8,16 @@ DEFAULT_IMAGE_FORMAT = "png"
 DEFAULT_BACKGROUND_COLOR = Color(0, 0, 0, 0)
 
 
+class ImageConfiguration(object):
+    """Properties for the image request"""
+
+    def __init__(self, **kwargs):
+        self.extent = kwargs.get('extent')
+        self.size = kwargs.get('size', DEFAULT_IMAGE_SIZE)
+        self.image_format = kwargs.get('image_format', DEFAULT_IMAGE_FORMAT)
+        self.background_color = kwargs.get('background_color', DEFAULT_BACKGROUND_COLOR)
+
+
 class ConfigurationBase(object):
     """Base request configuration class"""
 
@@ -32,17 +42,13 @@ class ConfigurationBase(object):
 
 
 class RenderConfiguration(ConfigurationBase):
-    """Properties for a render image request"""
+    """Properties for rendering the variable"""
 
     def __init__(self, variable, **kwargs):
         super(RenderConfiguration, self).__init__(variable, time_index=kwargs.get('time_index'))
 
-        self.extent = kwargs.get('extent', variable.service.full_extent)
         self.renderer = kwargs.get('render', variable.renderer)
-        self.size = kwargs.get('size', DEFAULT_IMAGE_SIZE)
         self.time_index = kwargs.get('time_index')
-        self.image_format = kwargs.get('image_format', DEFAULT_IMAGE_FORMAT)
-        self.background_color = kwargs.get('background_color', DEFAULT_BACKGROUND_COLOR)
 
     @property
     def hash(self):

@@ -154,9 +154,10 @@ class GetImageViewBase(NetCdfDatasetMixin, ServiceView):
 
     def get_render_configurations(self, request, **kwargs):
         """
-        This method should be implemented by the interface view class to process an incoming request and return a list
-        of RenderConfiguration objects (one per variable to render). When rendering multiple variables, the first
-        variable in the returned list will be placed at the top of the final image.
+        This method should be implemented by the interface view class to process an incoming request and return an
+        ImageConfiguration object and a list of RenderConfiguration objects (one per variable to render). When
+        rendering multiple variables, the first variable in the returned list will be placed at the top of the final
+        image.
         """
 
         raise NotImplementedError
@@ -203,11 +204,8 @@ class GetImageViewBase(NetCdfDatasetMixin, ServiceView):
 
     def handle_request(self, request, **kwargs):
         try:
-            configurations = self.get_render_configurations(request, **kwargs)
-            if not configurations:
-                return HttpResponse()
+            base_config, configurations = self.get_render_configurations(request, **kwargs)
 
-            base_config = configurations[0]
             extent = self._normalize_bbox(base_config.extent, base_config.size)
             size = base_config.size
             final_image = Image.new('RGBA', size, base_config.background_color.to_tuple())
