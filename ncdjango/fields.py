@@ -56,7 +56,7 @@ class RasterRendererField(with_metaclass(models.SubfieldBase, models.TextField))
             kwargs = {
                 'colormap': [(c[0], Color(*c[1])) for c in data['colormap']],
                 'fill_value': params.get('fill_value'),
-                'background_color': Color(*params.get('background_color'))
+                'background_color': Color(*params.get('background_color')) if params.get('background_color') else None
             }
 
             if name == "stretched":
