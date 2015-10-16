@@ -186,11 +186,11 @@ class LayerDetailView(DetailView):
         return data
 
 
-class ArcGisMapServerMixin(object):
+class ArcGISMapServerMixin(object):
     def __init__(self, *args, **kwargs):
         self.form_data = {}
 
-        return super(ArcGisMapServerMixin, self).__init__(*args, **kwargs)
+        return super(ArcGISMapServerMixin, self).__init__(*args, **kwargs)
 
     def process_form_data(self, defaults, data):
         form_params = defaults
@@ -239,7 +239,7 @@ class ArcGisMapServerMixin(object):
         return configurations
 
 
-class GetImageView(ArcGisMapServerMixin, GetImageViewBase):
+class GetImageView(ArcGISMapServerMixin, GetImageViewBase):
     form_class = GetImageForm
 
     def _get_form_defaults(self):
@@ -294,7 +294,7 @@ class GetImageView(ArcGisMapServerMixin, GetImageViewBase):
         )
 
 
-class IdentifyView(ArcGisMapServerMixin, IdentifyViewBase):
+class IdentifyView(ArcGISMapServerMixin, IdentifyViewBase):
     form_class = IdentifyForm
 
     def _get_form_defaults(self):
@@ -346,7 +346,7 @@ class IdentifyView(ArcGisMapServerMixin, IdentifyViewBase):
         )
 
 
-class LegendView(ArcGisMapServerMixin, LegendViewBase):
+class LegendView(ArcGISMapServerMixin, LegendViewBase):
     def set_legend_sizes(self, configurations):
         for config in configurations:
             if isinstance(config.renderer, StretchedRenderer):
