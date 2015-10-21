@@ -259,22 +259,22 @@ class GetImageView(ArcGISMapServerMixin, GetImageViewBase):
     def get_service_name(self, request, *args, **kwargs):
         return kwargs['service_name']
 
-    def format_image(self, image, image_format):
+    def format_image(self, image, image_format, **kwargs):
         """Returns an image in the request format"""
 
         image_format = image_format.lower()
 
         if image_format == 'png8':
-            # Transparency for PNG8 isn't working at the moment...
-            # alpha = image.split()[-1]
-            # image = image.convert('RGB')
-            # image.convert('P', palette=Image.ADAPTIVE, colors=255)
-            # image.paste(255, Image.eval(alpha, lambda x: 255 if x <= 128 else 0))
+            alpha = image.split()[-1]
+            image = image.convert('RGB')
+            image = image.convert('P', palette=Image.ADAPTIVE, colors=255)
+            image.paste(255, Image.eval(alpha, lambda x: 255 if x <= 128 else 0))
             image_format = 'png'
+            kwargs['transparency'] = 255
         elif image_format in ('png32', 'png24'):
             image_format = 'png'
 
-        return super(GetImageView, self).format_image(image, image_format)
+        return super(GetImageView, self).format_image(image, image_format, **kwargs)
 
     def get_render_configurations(self, request, **kwargs):
         """Render image interface"""

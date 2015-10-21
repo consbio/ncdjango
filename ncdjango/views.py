@@ -162,12 +162,12 @@ class GetImageViewBase(NetCdfDatasetMixin, ServiceView):
 
         raise NotImplementedError
 
-    def format_image(self, image, image_format):
+    def format_image(self, image, image_format, **kwargs):
         """Returns an image in the request format"""
 
         if image_format in ('png', 'jpg', 'jpeg', 'gif', 'bmp'):
             buffer = six.BytesIO()
-            image.save(buffer, image_format)
+            image.save(buffer, image_format, **kwargs)
             return buffer.getvalue(), "image/{}".format(image_format)
         else:
             raise ValueError('Unsupported format: {}'.format(image_format))
