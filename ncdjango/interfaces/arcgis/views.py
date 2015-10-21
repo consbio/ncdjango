@@ -17,7 +17,7 @@ from ncdjango.interfaces.arcgis.forms import GetImageForm, IdentifyForm
 from ncdjango.interfaces.arcgis.utils import date_to_timestamp, extent_to_envelope
 from ncdjango.models import Service, Variable
 from ncdjango.utils import proj4_to_epsg
-from ncdjango.views import GetImageViewBase, IdentifyViewBase, LegendViewBase
+from ncdjango.views import GetImageViewBase, IdentifyViewBase, LegendViewBase, FORCE_WEBP
 
 ALLOW_BEST_FIT_TIME_INDEX = getattr(settings, 'NC_ALLOW_BEST_FIT_TIME_INDEX', True)
 
@@ -263,8 +263,11 @@ class GetImageView(ArcGISMapServerMixin, GetImageViewBase):
         """Returns an image in the request format"""
 
         image_format = image_format.lower()
+        accept = self.request.META['HTTP_ACCEPT'].split(',')
 
-        if image_format == 'png8':
+        if FORCE_WEBP and 'image/webp' in accept:
+            image_format = 'webp'
+        elif image_format == 'png8':
             alpha = image.split()[-1]
             image = image.convert('RGB')
             image = image.convert('P', palette=Image.ADAPTIVE, colors=255)

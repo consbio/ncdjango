@@ -9,6 +9,7 @@ from six.moves.urllib.parse import unquote
 from PIL import Image
 from clover.geometry.bbox import BBox
 from clover.render.renderers.classified import ClassifiedRenderer
+from django.conf import settings
 from django.contrib.auth.decorators import login_required, permission_required
 from django.core.files import File
 from django.http.response import HttpResponseBadRequest, HttpResponse
@@ -27,6 +28,8 @@ from ncdjango.forms import TemporaryFileForm
 from ncdjango.geoimage import GeoImage
 from ncdjango.models import Service, SERVICE_DATA_ROOT, TemporaryFile
 from ncdjango.utils import project_geometry
+
+FORCE_WEBP = getattr(settings, 'NC_FORCE_WEBP', False)
 
 
 class ServiceView(View):
@@ -165,7 +168,21 @@ class GetImageViewBase(NetCdfDatasetMixin, ServiceView):
     def format_image(self, image, image_format, **kwargs):
         """Returns an image in the request format"""
 
-        if image_format in ('png', 'jpg', 'jpeg', 'gif', 'bmp'):
+        if image_format in ('png', 'jpg', 'jpeg', 'gif', 'bmp', 'webp'):
+            if image_format != 'webp' and FORCE_WEBP:
+                # Always return WebP when supported by the browser
+                accept = self.request.META['HTTP_ACCEPT'].split(',')
+                if 'image/webp' in accept:
+                    image = image.convert('RGBA')
+                    image_format = 'webp'
+                    kwargs = {'lossless': True}
+
+            if image_format == 'png':
+                kwargs['optimize'] = True
+            elif image_format == 'jpg':
+                image.convert('RGB')
+                kwargs['progressive'] = True
+
             buffer = six.BytesIO()
             image.save(buffer, image_format, **kwargs)
             return buffer.getvalue(), "image/{}".format(image_format)
