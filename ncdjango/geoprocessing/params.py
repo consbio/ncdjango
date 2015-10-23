@@ -202,7 +202,7 @@ class DictParameter(Parameter):
         raise ParameterNotValidError
 
 
-class RasterParameter(Parameter):
+class NdArrayParameter(Parameter):
     """Accepts a numpy array"""
 
     id = 'raster'

@@ -183,7 +183,7 @@ class Workflow(Task):
             'outputs': [{'name': k, 'node': v} for k, v in six.iteritems(self.output_mapping)]
         }
 
-        for node in six.itervalues(self.nodes_by_id):
+        for node in sorted(six.itervalues(self.nodes_by_id), key=lambda x: x.id):
             task_name = node.task.name
             if not task_name:
                 raise ValueError('The task {0} does not have a name and therefore cannot be serialized.'.format(
