@@ -1,5 +1,7 @@
 import operator
+import numpy
 from ply import lex, yacc
+from rasterio.dtypes import is_ndarray
 
 
 class Lexer(object):
@@ -14,15 +16,18 @@ class Lexer(object):
         'FALSE': "FALSE"
     }
 
+    functions = {'abs', 'min', 'max', 'median', 'mean', 'std', 'var'}
+
     tokens = [
-        'STR', 'ID', 'INT', 'FLOAT', 'ADD', 'SUB', 'POW', 'MUL', 'DIV', 'AND', 'OR', 'EQ', 'LTE', 'GTE', 'LT', 'GT',
-        'LPAREN', 'RPAREN', 'TRUE', 'FALSE'
+        'COMMA', 'STR', 'ID', 'INT', 'FLOAT', 'ADD', 'SUB', 'POW', 'MUL', 'DIV', 'AND', 'OR', 'EQ', 'LTE', 'GTE', 'LT',
+        'GT', 'LPAREN', 'RPAREN', 'TRUE', 'FALSE', 'FUNC'
     ]
 
     literals = ['.']
 
     t_ignore = ' \t\n'
 
+    t_COMMA = r','
     t_ADD = r'\+'
     t_SUB = r'-'
     t_POW = r'\*\*'
@@ -49,11 +54,13 @@ class Lexer(object):
     def t_ID(self, t):
         r'[a-zA-Z_][a-zA-Z_0-9]*'
 
-        # Reserved name?
+        # If the value is a reserved name, give it the appropriate type (not ID)
         if t.value in self.reserved:
             t.type = self.reserved[t.value]
-        else:
-            self.names.add(t.value)
+
+        # If it's a function, give it the FUNC type
+        elif t.value in self.functions:
+            t.type = 'FUNC'
 
         return t
 
@@ -70,15 +77,11 @@ class Lexer(object):
         return t
 
     def __init__(self):
-        self.names = set()
         self.lexer = lex.lex(module=self)
 
     def get_names(self, expr):
-        self.names = set()
         self.lexer.input(expr)
-        list(self.lexer)
-
-        return self.names
+        return set(t.value for t in self.lexer if t.type == 'ID')
 
 
 class Parser(object):
@@ -186,6 +189,110 @@ class Parser(object):
         'factor : ID'
 
         p[0] = self.context[p[1]]
+
+    def p_factor_fn(self, p):
+        'factor : fn'
+
+        p[0] = p[1]
+
+    def p_fn(self, p):
+        'fn : FUNC LPAREN arguments RPAREN'
+
+        fn = getattr(self, 'fn_{0}'.format(p[1]))
+        p[0] = fn(*p[3])
+
+    def p_arguments(self, p):
+        'arguments : conditional COMMA arguments'
+
+        p[0] = p[3] + p[1]
+
+    def p_arguments_conditional(self, p):
+        'arguments : conditional'
+
+        p[0] = [p[1]]
+
+    def _to_ndarray(self, a):
+        """Casts Python lists and tuples to a numpy array or raises an AssertionError."""
+
+        if isinstance(a, (list, tuple)):
+            a = numpy.array(a)
+
+        assert is_ndarray(a)  # Todo: better error to caller
+
+        return a
+
+    def fn_abs(self, value):
+        """
+        Return the absolute value of a number.
+
+        :param value: The number.
+        :return: The absolute value of the number.
+        """
+
+        if is_ndarray(value):
+            return numpy.absolute(value)
+        else:
+            return abs(value)
+
+    def fn_min(self, a):
+        """
+        Return the minimum of an array, ignoring any NaNs.
+
+        :param a: The array.
+        :return: The minimum value of the array.
+        """
+
+        return numpy.nanmin(self._to_ndarray(a))
+
+    def fn_max(self, a):
+        """
+        Return the maximum of an array, ignoring any NaNs.
+
+        :param a: The array.
+        :return: The maximum value of the array
+        """
+
+        return numpy.nanmax(self._to_ndarray(a))
+
+    def fn_median(self, a):
+        """
+        Compute the median of an array, ignoring NaNs.
+
+        :param a: The array.
+        :return: The median value of the array.
+        """
+
+        return numpy.nanmedian(self._to_ndarray(a))
+
+    def fn_mean(self, a):
+        """
+        Compute the arithmetic mean of an array, ignoring NaNs.
+
+        :param a: The array.
+        :return: The arithmetic mean of the array.
+        """
+
+        return numpy.nanmean(self._to_ndarray(a))
+
+    def fn_std(self, a):
+        """
+        Compute the standard deviation of an array, ignoring NaNs.
+
+        :param a: The array.
+        :return: The standard deviation of the array.
+        """
+
+        return numpy.nanstd(self._to_ndarray(a))
+
+    def fn_var(self, a):
+        """
+        Compute the variance of an array, ignoring NaNs.
+
+        :param a: The array.
+        :return: The variance of the array.
+        """
+
+        return numpy.nanvar(self._to_ndarray(a))
 
     def __init__(self):
         self.context = {}

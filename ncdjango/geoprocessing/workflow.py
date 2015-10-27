@@ -50,10 +50,6 @@ class Task(six.with_metaclass(TaskBase)):
 
         if isinstance(ret, ParameterCollection):
             outputs = ret
-        elif isinstance(ret, (list, tuple)):
-            outputs = ParameterCollection(self.outputs)
-            for i, v in enumerate(ret):
-                outputs[i] = v
         else:
             outputs = ParameterCollection(self.outputs)
             if self.outputs:

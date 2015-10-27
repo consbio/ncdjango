@@ -1,4 +1,5 @@
 import numbers
+from types import GeneratorType
 from fiona.collection import Collection
 import netCDF4
 import numpy
@@ -58,6 +59,12 @@ class Parameter(six.with_metaclass(ParameterBase)):
 
         return (self.name,), {'required': True}
 
+    @staticmethod
+    def deserialize_args(args, kwargs):
+        """Returns deserialized forms of (args, kwargs) to be used when re-constructing this parameter."""
+
+        return args, kwargs
+
 
 class ParameterCollection(object):
     """Manages a collection of parameter types and values"""
@@ -97,15 +104,15 @@ class AnyParameter(Parameter):
 
 class MultiParameter(Parameter):
     """
-    Accepts a value matching one of several defined types. E.g., MultiParameter([StringParameter, DictParameter]) will
-    accept both strings and dictionaries.
+    Accepts a value matching one of several defined types.
+    E.g., `MultiParameter([StringParameter(''), DictParameter('')])` will accept both strings and dictionaries.
     """
 
     id = 'multiple'
 
     def __init__(self, types, *args, **kwargs):
         """
-        :param types: A list of `Parameter` classes to accept
+        :param types: A list of `Parameter` instances to accept.
         """
 
         super(MultiParameter, self).__init__(*args, **kwargs)
@@ -115,9 +122,9 @@ class MultiParameter(Parameter):
     def clean(self, value):
         """Cleans and returns the given value, or raises a ParameterNotValidError exception"""
 
-        for parameter_cls in self.types:
+        for parameter_obj in self.types:
             try:
-                return parameter_cls().clean(value)
+                return parameter_obj.clean(value)
             except ParameterNotValidError:
                 continue
 
@@ -127,7 +134,51 @@ class MultiParameter(Parameter):
         """Returns (args, kwargs) to be used when deserializing this parameter."""
 
         args, kwargs = super(MultiParameter, self).serialize_args()
-        args.insert(0, self.types)
+        args.insert(0, [[t.id, t.serialize_args()] for t in self.types])
+
+    @staticmethod
+    def deserialize_args(args, kwargs):
+        args, kwargs = super(MultiParameter, MultiParameter).deserialize_args(args[1:], kwargs)
+
+        types = []
+        for type_id, type_args in args[0]:
+            type_cls = Parameter.by_id(type_id)
+            type_args, type_kwargs = type_cls.deserialize_args(*type_args)
+            types.append(type_cls(*type_args, **type_kwargs))
+
+        args.insert(0, types)
+
+
+class ListParameter(Parameter):
+    """
+    Accepts a list of a given parameter type. This parameter will accept either a list-type object (list, tuple, set)
+    or a generator object. If it receives a generator object, `clean()` will also return a generator object. Otherwise,
+    it will return a list.
+    """
+
+    id = 'list'
+
+    def __init__(self, param_type, *args, **kwargs):
+        """
+        :param param_type: A `Parameter` instance.
+        """
+
+        super(ListParameter, self).__init__(*args, **kwargs)
+
+        self.param_type = param_type
+
+    def clean(self, value):
+        """Cleans and returns the given value, or raises a ParameterNotValidError exception"""
+
+        if not isinstance(value, (list, tuple, set, GeneratorType)):
+            value = [value]
+
+        gen = (self.param_type.clean(x) for x in value)
+
+        if isinstance(value, GeneratorType):
+            return gen
+        else:
+            return list(gen)
 
 
 class StringParameter(Parameter):
