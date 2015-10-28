@@ -155,6 +155,7 @@ class TestTask(object):
         assert is_ndarray(array_out)
         assert (array_out == expected).all()
 
+
 class TestRasterTasks(object):
     def test_mask_by_expression(self):
         task = MaskByExpression()

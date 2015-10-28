@@ -23,8 +23,6 @@ class Lexer(object):
         'GT', 'LPAREN', 'RPAREN', 'TRUE', 'FALSE', 'FUNC'
     ]
 
-    literals = ['.']
-
     t_ignore = ' \t\n'
 
     t_COMMA = r','
@@ -46,13 +44,13 @@ class Lexer(object):
     t_FALSE = r'(false)|(False)|(FALSE)'
 
     def t_STR(self, t):
-        r'(\'.*?\')|(".*?")'
+        r"""(\'.*?\')|(".*?")"""
 
         t.value = t.value[1:-1]
         return t
 
     def t_ID(self, t):
-        r'[a-zA-Z_][a-zA-Z_0-9]*'
+        r"""[a-zA-Z_][a-zA-Z_0-9]*"""
 
         # If the value is a reserved name, give it the appropriate type (not ID)
         if t.value in self.reserved:
@@ -65,13 +63,13 @@ class Lexer(object):
         return t
 
     def t_INT(self, t):
-        r'\d+'
+        r"""\d+"""
 
         t.value = int(t.value)
         return t
 
     def t_FLOAT(self, t):
-        r'\d+\.?\d*([eE]-?\d+)?'
+        r"""\d+\.?\d*([eE]-?\d+)?"""
 
         t.value = float(t.value)
         return t
@@ -123,22 +121,30 @@ class Parser(object):
         p[0] = self.binary_operators[p[2]](p[1], p[3])
 
     def p_conditional_condition(self, p):
-        'conditional : condition'
+        """
+        conditional : condition
+        """
 
         p[0] = p[1]
 
     def p_condition_expression(self, p):
-        'condition : expression'
+        """
+        condition : expression
+        """
 
         p[0] = p[1]
 
     def p_expression_term(self, p):
-        'expression : term'
+        """
+        expression : term
+        """
 
         p[0] = p[1]
 
     def p_term_factor(self, p):
-        'term : factor'
+        """
+        term : factor
+        """
 
         p[0] = p[1]
 
@@ -153,12 +159,16 @@ class Parser(object):
             p[0] *= -1
 
     def p_factor_number(self, p):
-        'factor : number'
+        """
+        factor : number
+        """
 
         p[0] = p[1]
 
     def p_factor_string(self, p):
-        'factor : STR'
+        """
+        factor : STR
+        """
 
         p[0] = p[1]
 
@@ -171,43 +181,59 @@ class Parser(object):
         p[0] = True if p[1].lower() == 'true' else False
 
     def p_factor_conditional(self, p):
-        'factor : LPAREN conditional RPAREN'
+        """
+        factor : LPAREN conditional RPAREN
+        """
 
         p[0] = p[2]
 
     def p_number_int(self, p):
-        'number : INT'
+        """
+        number : INT
+        """
 
         p[0] = p[1]
 
     def p_number_float(self, p):
-        'number : FLOAT'
+        """
+        number : FLOAT
+        """
 
         p[0] = p[1]
 
     def p_factor_id(self, p):
-        'factor : ID'
+        """
+        factor : ID
+        """
 
         p[0] = self.context[p[1]]
 
     def p_factor_fn(self, p):
-        'factor : fn'
+        """
+        factor : fn
+        """
 
         p[0] = p[1]
 
     def p_fn(self, p):
-        'fn : FUNC LPAREN arguments RPAREN'
+        """
+        fn : FUNC LPAREN arguments RPAREN
+        """
 
         fn = getattr(self, 'fn_{0}'.format(p[1]))
         p[0] = fn(*p[3])
 
     def p_arguments(self, p):
-        'arguments : conditional COMMA arguments'
+        """
+        arguments : conditional COMMA arguments
+        """
 
         p[0] = p[3] + p[1]
 
     def p_arguments_conditional(self, p):
-        'arguments : conditional'
+        """
+        arguments : conditional
+        """
 
         p[0] = [p[1]]
 
