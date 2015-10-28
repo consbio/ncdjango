@@ -6,12 +6,29 @@ from numpy.ma import masked_array
 import pytest
 from rasterio.dtypes import is_ndarray
 from ncdjango.geoprocessing.evaluation import Lexer, Parser
+from ncdjango.geoprocessing.exceptions import ExecutionError
 from ncdjango.geoprocessing.params import StringParameter, IntParameter
 from ncdjango.geoprocessing.tasks.raster import MaskByExpression, ApplyExpression, LoadRasterDataset, ArrayFromDataset
 from ncdjango.geoprocessing.tasks.raster import MapByExpression, ReduceByExpression
 from ncdjango.geoprocessing.workflow import Task, Workflow
 
 TEST_DATA_DIR = os.path.join(os.path.dirname(__file__), 'test_data')
+
+
+@pytest.fixture
+def simple_task():
+    class SimpleTask(Task):
+        inputs = [
+            StringParameter('str_in', required=True)
+        ]
+        outputs = [
+            StringParameter('str_out')
+        ]
+
+        def execute(self, str_in):
+            return str_in
+
+    return SimpleTask()
 
 
 @pytest.fixture
@@ -50,20 +67,19 @@ def simple_workflow():
 
 
 class TestTask(object):
-    def test_simple_task(self):
-        class SimpleTask(Task):
-            inputs = [
-                StringParameter('str_in', required=True)
-            ]
-            outputs = [
-                StringParameter('str_out')
-            ]
+    def test_simple_task(self, simple_task):
+        assert simple_task(str_in='Test')['str_out'] == 'Test'
 
-            def execute(self, str_in):
-                return str_in
+    def test_simple_task_exceptions(self, simple_task):
+        with pytest.raises(TypeError) as excinfo:
+            simple_task()
+        assert 'Missing required' in str(excinfo.value)
+        assert 'str_in' in str(excinfo.value)
 
-        task = SimpleTask()
-        assert task(str_in='Test')['str_out'] == 'Test'
+        with pytest.raises(TypeError) as excinfo:
+            simple_task(str_in='Test', foo='bar')
+        assert 'Unrecognized' in str(excinfo.value)
+        assert 'foo' in str(excinfo.value)
 
     def test_simple_workflow_execution(self, simple_workflow):
         result = simple_workflow(int1=1, int2=2, int3=3)
@@ -227,6 +243,22 @@ class TestRasterTasks(object):
 
         assert is_ndarray(array_out)
         assert (array_out == expected).all()
+
+    def test_expression_errors(self):
+        task = ApplyExpression()
+        arr = numpy.array([1, 2, 3])
+
+        with pytest.raises(ExecutionError) as excinfo:
+            task(array_in=arr, expression='x ; 2')
+        assert 'expression is invalid' in str(excinfo.value)
+
+        with pytest.raises(ExecutionError) as excinfo:
+            task(array_in=arr, expression='x <> 2')
+        assert 'expression is invalid' in str(excinfo.value)
+
+        with pytest.raises(ValueError) as excinfo:
+            task(array_in=arr, expression='x + y')
+        assert 'exactly one variable' in str(excinfo.value)
 
 
 class TestEvaluations(object):
