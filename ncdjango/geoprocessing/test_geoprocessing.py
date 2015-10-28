@@ -141,6 +141,19 @@ class TestTask(object):
 
         assert json.loads(workflow.to_json()) == json.loads(serialized)
 
+    def test_map_reduce_workflow(self):
+        with open(os.path.join(TEST_DATA_DIR, 'map_reduce_workflow.json'), 'r') as f:
+            workflow = Workflow.from_json(f.read())
+
+        arr_1 = numpy.arange(10)
+        arr_2 = numpy.arange(10, 20)
+        arr_3 = numpy.arange(20, 30)
+        expected = sum([x / numpy.max(x) for x in [arr_1, arr_2, arr_3]])
+        result = workflow(arrays_in=[arr_1, arr_2, arr_3])
+        array_out = result['array_out']
+
+        assert is_ndarray(array_out)
+        assert (array_out == expected).all()
 
 class TestRasterTasks(object):
     def test_mask_by_expression(self):

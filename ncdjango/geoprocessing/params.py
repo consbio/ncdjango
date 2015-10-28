@@ -136,6 +136,8 @@ class MultiParameter(Parameter):
         args, kwargs = super(MultiParameter, self).serialize_args()
         args.insert(0, [[t.id, t.serialize_args()] for t in self.types])
 
+        return args, kwargs
+
     @staticmethod
     def deserialize_args(args, kwargs):
         args, kwargs = super(MultiParameter, MultiParameter).deserialize_args(args[1:], kwargs)
@@ -147,6 +149,8 @@ class MultiParameter(Parameter):
             types.append(type_cls(*type_args, **type_kwargs))
 
         args.insert(0, types)
+
+        return args, kwargs
 
 
 class ListParameter(Parameter):
@@ -180,6 +184,22 @@ class ListParameter(Parameter):
         else:
             return list(gen)
 
+    def serialize_args(self):
+        """Returns (args, kwargs) to be used when deserializing this parameter."""
+
+        args, kwargs = super(ListParameter, self).serialize_args()
+        args.insert(0, [self.param_type.id, self.param_type.serialize_args()])
+
+    @staticmethod
+    def deserialize_args(args, kwargs):
+        type_id, type_args = args[0]
+        args, kwargs = super(ListParameter, ListParameter).deserialize_args(args[1:], kwargs)
+
+        type_cls = Parameter.by_id(type_id)
+        type_args, type_kwargs = type_cls.deserialize_args(*type_args)
+        args.insert(0, type_cls(*type_args, **type_kwargs))
+
+        return args, kwargs
 
 class StringParameter(Parameter):
     """Accepts a string. Will convert numbers to string."""
@@ -256,7 +276,7 @@ class DictParameter(Parameter):
 class NdArrayParameter(Parameter):
     """Accepts a numpy array"""
 
-    id = 'raster'
+    id = 'array'
 
     def clean(self, value):
         """Cleans and returns the given value, or raises a ParameterNotValidError exception"""

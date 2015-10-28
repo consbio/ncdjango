@@ -116,6 +116,8 @@ class Workflow(Task):
 
                 if value[1] in dependency.outputs:
                     task_inputs[name] = dependency.outputs[value[1]]
+            elif source == 'literal':
+                task_inputs[name] = value
             else:
                 raise ValueError('Invalid input source: {0}'.format(source))
 
@@ -174,10 +176,25 @@ class Workflow(Task):
                 'name': self.name,
                 'description': self.description
             },
-            'inputs': [{'name': p.name, 'type': p.id} for p in self.inputs],
+            'inputs': [],
             'workflow': [],
             'outputs': [{'name': k, 'node': v} for k, v in six.iteritems(self.output_mapping)]
         }
+
+        for parameter in self.inputs:
+            input_info = {
+                'name': parameter.name,
+                'type': parameter.id
+            }
+
+            args, kwargs = parameter.serialize_args()
+            args = list(args)
+            args.pop(0)  # 'name' is already taken care of
+            kwargs.pop('required', None)  # 'required' is assumed True for workflow inputs
+            if args or kwargs:
+                input_info['args'] = [args, kwargs]
+
+            d['inputs'].append(input_info)
 
         for node in sorted(six.itervalues(self.nodes_by_id), key=lambda x: x.id):
             task_name = node.task.name
@@ -215,17 +232,33 @@ class Workflow(Task):
         workflow = cls(name=meta.get('name'), description=meta.get('description'))
 
         for workflow_input in d.get('inputs', []):
-            workflow.inputs.append(Parameter.by_id(workflow_input['type'])(workflow_input['name']))
+            parameter_cls = Parameter.by_id(workflow_input['type'])
+
+            args = [workflow_input['name']]
+            kwargs = {'required': True}
+            if workflow_input.get('args'):
+                args = workflow_input['args'][0] + args
+                kwargs.update(workflow_input['args'][1])
+                args, kwargs = parameter_cls.deserialize_args(args, kwargs)
+
+            workflow.inputs.append(parameter_cls(*args, **kwargs))
 
         for node in d.get('workflow', []):
             node_inputs = {}
             for k, v in six.iteritems(node.get('inputs', {})):
                 node_inputs[k] = (v['source'], v.get('input') or v.get('node'))
 
-            workflow.add_node(node['id'], Task.by_name(node['task']), node_inputs)
+            workflow.add_node(node['id'], Task.by_name(node['task'])(), node_inputs)
 
         for output in d.get('outputs', []):
             node = output['node']
+            node_parameters = ParameterCollection(workflow.nodes_by_id[node[0]].task.outputs)
+
+            # Add paramater to workflow output
+            output_param = copy.copy(node_parameters.by_name[node[1]])
+            output_param.name = output['name']
+            workflow.outputs.append(output_param)
+
             workflow.map_output(node[0], node[1], output['name'])
 
         return workflow
