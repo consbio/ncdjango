@@ -41,10 +41,14 @@ class Task(six.with_metaclass(TaskBase)):
         inputs = ParameterCollection(self.inputs)
 
         for k, v in six.iteritems(kwargs):
+            try:
             inputs[k] = v
+            except KeyError:
+                raise TypeError('Unrecognized parameter: {}'.format(k))
 
         if not inputs.is_complete:
-            raise ValueError('Missing required parameters')  # Todo: more info here
+            missing_parameters = set(x.name for x in self.inputs if x.required).difference(set(kwargs.keys()))
+            raise TypeError('Missing required parameters: {}'.format(tuple(missing_parameters)))
 
         ret = self.execute(**inputs.format_args())
 

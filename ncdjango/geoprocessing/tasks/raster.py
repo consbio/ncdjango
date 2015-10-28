@@ -64,8 +64,8 @@ class SingleArrayExpressionBase(ExpressionMixin, Task):
 
         expression_names = self.get_expression_names(expr)
 
-        if len(expression_names) > 1:
-            raise ValueError('The expression must not have more than one variable (the array).')
+        if len(expression_names) != 1:
+            raise ValueError('The expression must have exactly one variable.')
 
         return {expression_names[0]: arr}
 
