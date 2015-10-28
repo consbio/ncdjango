@@ -19,7 +19,7 @@ class Lexer(object):
     functions = {'abs', 'min', 'max', 'median', 'mean', 'std', 'var'}
 
     tokens = [
-        'COMMA', 'STR', 'ID', 'INT', 'FLOAT', 'ADD', 'SUB', 'POW', 'MUL', 'DIV', 'AND', 'OR', 'EQ', 'LTE', 'GTE', 'LT',
+        'COMMA', 'STR', 'ID', 'INT', 'FLOAT', 'ADD', 'SUB', 'POW', 'MUL', 'DIV', 'MOD', 'AND', 'OR', 'EQ', 'LTE', 'GTE', 'LT',
         'GT', 'LPAREN', 'RPAREN', 'TRUE', 'FALSE', 'FUNC'
     ]
 
@@ -31,6 +31,7 @@ class Lexer(object):
     t_POW = r'\*\*'
     t_MUL = r'\*'
     t_DIV = r'/'
+    t_MOD = r'%'
     t_AND = r'&&'
     t_OR = r'\|\|'
     t_EQ = r'=='
@@ -94,6 +95,7 @@ class Parser(object):
         '*': operator.mul,
         '/': operator.truediv,
         '**': operator.pow,
+        '%': operator.mod,
         '&&': lambda x, y: x and y,
         '||': lambda x, y: x or y,
         'and': lambda x, y: x and y,
@@ -119,6 +121,7 @@ class Parser(object):
         term        : term MUL factor
                     | term DIV factor
                     | term POW factor
+                    | term MOD factor
         """
 
         p[0] = self.binary_operators[p[2]](p[1], p[3])

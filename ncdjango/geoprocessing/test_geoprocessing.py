@@ -249,6 +249,7 @@ class TestEvaluations(object):
         assert p.evaluate('1 / 2') == 0.5  # Uses true division for ints, as in Python 3
         assert p.evaluate('1 + 2 ** 4') == 17
         assert p.evaluate('(1 + 2) ** 4') == 81
+        assert p.evaluate('10 % 5') == 0
 
     def test_variables(self):
         p = Parser()
