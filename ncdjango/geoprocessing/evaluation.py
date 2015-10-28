@@ -74,6 +74,9 @@ class Lexer(object):
         t.value = float(t.value)
         return t
 
+    def t_error(self, t):
+        raise SyntaxError("Illegal character {0} at position {1}".format(t.value[0], t.lexpos))
+
     def __init__(self):
         self.lexer = lex.lex(module=self)
 
@@ -206,7 +209,10 @@ class Parser(object):
         factor : ID
         """
 
-        p[0] = self.context[p[1]]
+        try:
+            p[0] = self.context[p[1]]
+        except KeyError:
+            raise NameError("name '{}' is not defined".format(p[1]))
 
     def p_factor_fn(self, p):
         """
@@ -243,7 +249,8 @@ class Parser(object):
         if isinstance(a, (list, tuple)):
             a = numpy.array(a)
 
-        assert is_ndarray(a)  # Todo: better error to caller
+        if not is_ndarray(a):
+            raise ValueError("Expected an ndarray but got object of type '{}' instead".format(type(a)))
 
         return a
 
@@ -319,6 +326,12 @@ class Parser(object):
         """
 
         return numpy.nanvar(self._to_ndarray(a))
+
+    def p_error(self, p):
+        if p:
+            raise SyntaxError("Syntax error '{0}' at position {1}".format(p.value, p.lexpos))
+        else:
+            raise SyntaxError("Invalid syntax at end of statement")
 
     def __init__(self):
         self.context = {}

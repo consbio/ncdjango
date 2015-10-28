@@ -1,6 +1,7 @@
 from numpy import ma
 import six
 from ncdjango.geoprocessing.evaluation import Lexer, Parser
+from ncdjango.geoprocessing.exceptions import ExecutionError
 from ncdjango.geoprocessing.params import NdArrayParameter, StringParameter, RasterDatasetParameter, ListParameter
 from ncdjango.geoprocessing.workflow import Task
 from netCDF4 import Dataset
@@ -28,7 +29,26 @@ class ArrayFromDataset(Task):
         return dataset[variable][:]
 
 
-class SingleArrayExpressionBase(Task):
+class ExpressionMixin(object):
+    """A mixin class to handle expression parsing and error handling."""
+
+    def get_expression_names(self, expression):
+        try:
+            return list(Lexer().get_names(expression))
+        except SyntaxError as e:
+            raise ExecutionError('The expression is invalid ({0}): {1}'.format(str(e), expression), self)
+
+    def evaluate_expression(self, expression, context={}):
+        try:
+            return Parser().evaluate(expression, context=context)
+        except (SyntaxError, NameError) as e:
+            raise ExecutionError(
+                'The expression is invalid ({0}): {1}\nContext: {2}'.format(str(e), expression, str(context)),
+                self
+            )
+
+
+class SingleArrayExpressionBase(ExpressionMixin, Task):
     """Base class for tasks with a single array and expression as inputs."""
 
     inputs = [NdArrayParameter('array_in', required=True), StringParameter('expression', required=True)]
@@ -42,7 +62,7 @@ class SingleArrayExpressionBase(Task):
         :param expr: The input expression.
         """
 
-        expression_names = list(Lexer().get_names(expr))
+        expression_names = self.get_expression_names(expr)
 
         if len(expression_names) > 1:
             raise ValueError('The expression must not have more than one variable (the array).')
@@ -58,10 +78,8 @@ class MaskByExpression(SingleArrayExpressionBase):
     def execute(self, array_in, expression):
         """Creates and returns a masked view of the input array."""
 
-        parser = Parser()
         context = self.get_context(array_in, expression)
-
-        return ma.masked_where(parser.evaluate(expression, context=context), array_in)
+        return ma.masked_where(self.evaluate_expression(expression, context), array_in)
 
 
 class ApplyExpression(SingleArrayExpressionBase):
@@ -72,10 +90,8 @@ class ApplyExpression(SingleArrayExpressionBase):
     def execute(self, array_in, expression):
         """Returns a new array, resulting from applying the expression to the input array."""
 
-        parser = Parser()
         context = self.get_context(array_in, expression)
-
-        return parser.evaluate(expression, context=context)
+        return self.evaluate_expression(expression, context)
 
 
 class MapByExpression(SingleArrayExpressionBase):
@@ -89,11 +105,10 @@ class MapByExpression(SingleArrayExpressionBase):
     outputs = [ListParameter(NdArrayParameter(''), 'arrays_out')]
 
     def execute(self, arrays_in, expression):
-        parser = Parser()
-        return [parser.evaluate(expression, self.get_context(a, expression)) for a in arrays_in]
+        return [self.evaluate_expression(expression, self.get_context(a, expression)) for a in arrays_in]
 
 
-class ReduceByExpression(Task):
+class ReduceByExpression(ExpressionMixin, Task):
     """Iteratively reduces a list of arrays using an expression."""
 
     name = 'raster:reduce_by_expression'
@@ -105,18 +120,17 @@ class ReduceByExpression(Task):
     outputs = [NdArrayParameter('array_out')]
 
     def execute(self, arrays_in, expression, initial_array=None):
-        parser = Parser()
-        expression_names = list(Lexer().get_names(expression))
+        expression_names = self.get_expression_names(expression)
 
         if len(expression_names) != 2:
-            raise ValueError("The expression must not have exactly two variables (x, y).")
+            raise ValueError("The expression must have exactly two variables.")
 
         def reduce_fn(x, y):
             context = {
                 expression_names[0]: x,
                 expression_names[1]: y
             }
-            return parser.evaluate(expression, context=context)
+            return self.evaluate_expression(expression, context)
 
         args = [reduce_fn, arrays_in]
         if initial_array is not None:

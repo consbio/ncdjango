@@ -254,7 +254,7 @@ class Workflow(Task):
             node = output['node']
             node_parameters = ParameterCollection(workflow.nodes_by_id[node[0]].task.outputs)
 
-            # Add paramater to workflow output
+            # Add parameter to workflow output
             output_param = copy.copy(node_parameters.by_name[node[1]])
             output_param.name = output['name']
             workflow.outputs.append(output_param)
