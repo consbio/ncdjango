@@ -1,7 +1,11 @@
 import copy
 import json
+import logging
 import six
+import time
 from ncdjango.geoprocessing.params import ParameterCollection, Parameter
+
+logger = logging.getLogger(__name__)
 
 
 class TaskBase(type):
@@ -42,7 +46,7 @@ class Task(six.with_metaclass(TaskBase)):
 
         for k, v in six.iteritems(kwargs):
             try:
-            inputs[k] = v
+                inputs[k] = v
             except KeyError:
                 raise TypeError('Unrecognized parameter: {}'.format(k))
 
@@ -50,7 +54,18 @@ class Task(six.with_metaclass(TaskBase)):
             missing_parameters = set(x.name for x in self.inputs if x.required).difference(set(kwargs.keys()))
             raise TypeError('Missing required parameters: {}'.format(tuple(missing_parameters)))
 
-        ret = self.execute(**inputs.format_args())
+        if self.name:
+            logger.info('Starting task {0}...\nInputs: {1}'.format(self.name, str(inputs.format_args())))
+        start = time.time()
+        try:
+            ret = self.execute(**inputs.format_args())
+        except:
+            if self.name:
+                logger.exception('Task {0} failed.'.format(self.name))
+            raise
+        if self.name:
+            logger.info('Task {0} finished in {1:.3f} seconds'.format(self.name, time.time() - start))
+
 
         if isinstance(ret, ParameterCollection):
             outputs = ret

@@ -1,10 +1,14 @@
 import json
 import os
+
+from clover.geometry.bbox import BBox
 from netCDF4 import Dataset
 import numpy
 from numpy.ma import masked_array
 import pytest
 from rasterio.dtypes import is_ndarray
+
+from ncdjango.geoprocessing.data import Raster
 from ncdjango.geoprocessing.evaluation import Lexer, Parser
 from ncdjango.geoprocessing.exceptions import ExecutionError
 from ncdjango.geoprocessing.params import StringParameter, IntParameter
@@ -380,5 +384,32 @@ class TestEvaluations(object):
         assert (p.evaluate('var(x, 0)', context=nd_context) == numpy.nanvar(nd_arr, 0)).all()
         assert (p.evaluate('var(x, 1)', context=nd_context) == numpy.nanvar(nd_arr, 1)).all()
 
+        assert (p.evaluate('mask(x, x < 10)', context=context) == numpy.ma.masked_where(arr < 10, arr)).all()
+
         assert p.evaluate('min(x) < max(x)', context=context) == True
         assert p.evaluate('abs(min(x))', context={'x': numpy.array([-1, 2, 3])}) == 1
+
+
+class TestDataTypes(object):
+    def test_raster(self):
+        arr = numpy.reshape(numpy.arange(100), (10, 10))
+        extent = BBox((0, 0, 10, 10))
+        raster = Raster(arr, extent, 1, 0)
+
+        assert isinstance(raster, Raster)
+        raster = raster[:]
+        assert isinstance(raster, Raster)
+
+        clipped = raster[3:, 3:-1]
+        assert isinstance(clipped, Raster)
+        assert clipped.extent.as_list() == [3, 0, 10, 7]
+
+        raster.y_increasing = True
+        clipped = raster[3:, 3:-1]
+        assert isinstance(clipped, Raster)
+        assert clipped.extent.as_list() == [3, 3, 10, 10]
+
+        clipped = raster[0]
+        assert not isinstance(clipped, Raster)
+        assert is_ndarray(clipped)
+        assert (clipped == numpy.array([0, 1, 2, 3, 4, 5, 6, 7, 8, 9])).all()

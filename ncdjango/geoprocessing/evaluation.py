@@ -16,7 +16,7 @@ class Lexer(object):
         'FALSE': "FALSE"
     }
 
-    functions = {'abs', 'min', 'max', 'median', 'mean', 'std', 'var'}
+    functions = {'abs', 'min', 'mask', 'max', 'median', 'mean', 'std', 'var'}
 
     tokens = [
         'COMMA', 'STR', 'ID', 'INT', 'FLOAT', 'ADD', 'SUB', 'POW', 'MUL', 'DIV', 'MOD', 'AND', 'OR', 'EQ', 'LTE', 'GTE',
@@ -279,6 +279,17 @@ class Parser(object):
         """
 
         return numpy.nanmin(self._to_ndarray(a), axis=axis)
+
+    def fn_mask(self, a, mask):
+        """
+        Return a masked version of an array.
+
+        :param a: The array.
+        :param mask: The mask.
+        :return: A masked array.
+        """
+
+        return numpy.ma.masked_where(mask, a)
 
     def fn_max(self, a, axis=None):
         """
