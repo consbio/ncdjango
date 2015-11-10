@@ -19,8 +19,8 @@ class Lexer(object):
     functions = {'abs', 'min', 'max', 'median', 'mean', 'std', 'var'}
 
     tokens = [
-        'COMMA', 'STR', 'ID', 'INT', 'FLOAT', 'ADD', 'SUB', 'POW', 'MUL', 'DIV', 'MOD', 'AND', 'OR', 'EQ', 'LTE', 'GTE', 'LT',
-        'GT', 'LPAREN', 'RPAREN', 'TRUE', 'FALSE', 'FUNC'
+        'COMMA', 'STR', 'ID', 'INT', 'FLOAT', 'ADD', 'SUB', 'POW', 'MUL', 'DIV', 'MOD', 'AND', 'OR', 'EQ', 'LTE', 'GTE',
+        'LT', 'GT', 'LPAREN', 'RPAREN', 'TRUE', 'FALSE', 'FUNC'
     ]
 
     t_ignore = ' \t\n'
@@ -237,7 +237,7 @@ class Parser(object):
         arguments : conditional COMMA arguments
         """
 
-        p[0] = p[3] + p[1]
+        p[0] = [p[1]] + p[3]
 
     def p_arguments_conditional(self, p):
         """
@@ -270,7 +270,7 @@ class Parser(object):
         else:
             return abs(value)
 
-    def fn_min(self, a):
+    def fn_min(self, a, axis=None):
         """
         Return the minimum of an array, ignoring any NaNs.
 
@@ -278,9 +278,9 @@ class Parser(object):
         :return: The minimum value of the array.
         """
 
-        return numpy.nanmin(self._to_ndarray(a))
+        return numpy.nanmin(self._to_ndarray(a), axis=axis)
 
-    def fn_max(self, a):
+    def fn_max(self, a, axis=None):
         """
         Return the maximum of an array, ignoring any NaNs.
 
@@ -288,9 +288,9 @@ class Parser(object):
         :return: The maximum value of the array
         """
 
-        return numpy.nanmax(self._to_ndarray(a))
+        return numpy.nanmax(self._to_ndarray(a), axis=axis)
 
-    def fn_median(self, a):
+    def fn_median(self, a, axis=None):
         """
         Compute the median of an array, ignoring NaNs.
 
@@ -298,9 +298,9 @@ class Parser(object):
         :return: The median value of the array.
         """
 
-        return numpy.nanmedian(self._to_ndarray(a))
+        return numpy.nanmedian(self._to_ndarray(a), axis=axis)
 
-    def fn_mean(self, a):
+    def fn_mean(self, a, axis=None):
         """
         Compute the arithmetic mean of an array, ignoring NaNs.
 
@@ -308,9 +308,9 @@ class Parser(object):
         :return: The arithmetic mean of the array.
         """
 
-        return numpy.nanmean(self._to_ndarray(a))
+        return numpy.nanmean(self._to_ndarray(a), axis=axis)
 
-    def fn_std(self, a):
+    def fn_std(self, a, axis=None):
         """
         Compute the standard deviation of an array, ignoring NaNs.
 
@@ -318,9 +318,9 @@ class Parser(object):
         :return: The standard deviation of the array.
         """
 
-        return numpy.nanstd(self._to_ndarray(a))
+        return numpy.nanstd(self._to_ndarray(a), axis=axis)
 
-    def fn_var(self, a):
+    def fn_var(self, a, axis=None):
         """
         Compute the variance of an array, ignoring NaNs.
 
@@ -328,7 +328,7 @@ class Parser(object):
         :return: The variance of the array.
         """
 
-        return numpy.nanvar(self._to_ndarray(a))
+        return numpy.nanvar(self._to_ndarray(a), axis=axis)
 
     def p_error(self, p):
         if p:

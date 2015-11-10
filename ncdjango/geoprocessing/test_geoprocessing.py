@@ -354,17 +354,31 @@ class TestEvaluations(object):
     def test_functions(self):
         p = Parser()
         arr = numpy.concatenate((numpy.arange(25), numpy.arange(100, 150)))
+        nd_arr = numpy.reshape(arr, (25, -1))
         context = {'x': arr}
+        nd_context = {'x': nd_arr}
 
         assert p.evaluate('abs(-5)') == 5
         assert p.evaluate('abs(5)') == 5
         assert (p.evaluate('abs(x)', context={'x': numpy.array([-1, -2, 3])}) == numpy.array([1, 2, 3])).all()
         assert p.evaluate('min(x)', context=context) == 0
+        assert (p.evaluate('min(x, 0)', context=nd_context) == numpy.nanmin(nd_arr, 0)).all()
+        assert (p.evaluate('min(x, 1)', context=nd_context) == numpy.nanmin(nd_arr, 1)).all()
         assert p.evaluate('max(x)', context=context) == 149
+        assert (p.evaluate('max(x, 0)', context=nd_context) == numpy.nanmax(nd_arr, 0)).all()
+        assert (p.evaluate('max(x, 1)', context=nd_context) == numpy.nanmax(nd_arr, 1)).all()
         assert p.evaluate('median(x)', context=context) == 112
+        assert (p.evaluate('median(x, 0)', context=nd_context) == numpy.nanmedian(nd_arr, 0)).all()
+        assert (p.evaluate('median(x, 1)', context=nd_context) == numpy.nanmedian(nd_arr, 1)).all()
         assert p.evaluate('mean(x)', context=context) == 87
+        assert (p.evaluate('mean(x, 0)', context=nd_context) == numpy.nanmean(nd_arr, 0)).all()
+        assert (p.evaluate('mean(x, 1)', context=nd_context) == numpy.nanmean(nd_arr, 1)).all()
         assert round(p.evaluate('std(x)', context=context), 3) == 54.485
+        assert (p.evaluate('std(x, 0)', context=nd_context) == numpy.nanstd(nd_arr, 0)).all()
+        assert (p.evaluate('std(x, 1)', context=nd_context) == numpy.nanstd(nd_arr, 1)).all()
         assert round(p.evaluate('var(x)', context=context), 3) == 2968.667
+        assert (p.evaluate('var(x, 0)', context=nd_context) == numpy.nanvar(nd_arr, 0)).all()
+        assert (p.evaluate('var(x, 1)', context=nd_context) == numpy.nanvar(nd_arr, 1)).all()
 
         assert p.evaluate('min(x) < max(x)', context=context) == True
         assert p.evaluate('abs(min(x))', context={'x': numpy.array([-1, 2, 3])}) == 1
