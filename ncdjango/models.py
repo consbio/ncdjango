@@ -8,11 +8,13 @@ from django.db import models
 from django.db.models.signals import post_delete
 from ncdjango.fields import BoundingBoxField, RasterRendererField
 from ncdjango.utils import auto_memoize
+from django.utils.translation import ugettext as _
 
 logger = logging.getLogger(__name__)
 
 SERVICE_DATA_ROOT = getattr(settings, 'NC_SERVICE_DATA_ROOT', '/var/ncdjango/services/')
 TEMPORARY_FILE_LOCATION = getattr(settings, 'NC_TEMPORARY_FILE_LOCATION', '/tmp')
+USER_MODEL = getattr(settings, 'AUTH_USER_MODEL', 'auth.User')
 
 
 class Service(models.Model):
@@ -39,7 +41,7 @@ class Service(models.Model):
 
     name = models.CharField(max_length=256, db_index=True, unique=True)
     description = models.TextField(null=True)
-    data_path = models.FilePathField(SERVICE_DATA_ROOT, recursive=True)
+    data_path = models.FilePathField(path=SERVICE_DATA_ROOT, recursive=True)
     projection = models.TextField()  # PROJ4 definition
     full_extent = BoundingBoxField()
     initial_extent = BoundingBoxField()
@@ -174,3 +176,27 @@ def temporary_file_deleted(sender, instance, **kwargs):
         except IOError:
             logger.exception("Error deleting temporary file: %s" % instance.file.name)
 post_delete.connect(temporary_file_deleted, sender=TemporaryFile)
+
+
+class ProcessingJob(models.Model):
+    STATUS_CHOICES = (
+        ('pending', _('Pending')),
+        ('running', _('Running')),
+        ('completed', _('Completed')),
+        ('failed', _('Failed'))
+    )
+
+    uuid = models.CharField(max_length=32, default=uuid.uuid4, db_index=True)
+    user = models.ForeignKey(USER_MODEL, null=True, on_delete=models.SET_NULL)
+    user_host = models.CharField(max_length=32)
+    created = models.DateTimeField(auto_now_add=True)
+    last_update = models.DateTimeField(auto_now=True)
+    celery_id = models.CharField(max_length=100)
+    status = models.CharField(max_length=15, choices=STATUS_CHOICES)
+    inputs = models.TextField(null=False, default="{}")
+    outputs = models.TextField(null=False, default="{}")
+
+    class Meta:
+        index_together = [
+            ['status', 'created']
+        ]

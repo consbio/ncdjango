@@ -201,6 +201,7 @@ class ListParameter(Parameter):
 
         return args, kwargs
 
+
 class StringParameter(Parameter):
     """Accepts a string. Will convert numbers to string."""
 
@@ -274,7 +275,7 @@ class DictParameter(Parameter):
 
 
 class NdArrayParameter(Parameter):
-    """Accepts a numpy array"""
+    """Accepts a numpy array or Python list"""
 
     id = 'array'
 
@@ -283,6 +284,8 @@ class NdArrayParameter(Parameter):
 
         if isinstance(value, numpy.ndarray):
             return value
+        elif isinstance(value, (list, tuple)):
+            return numpy.array(value)
 
         raise ParameterNotValidError
 
