@@ -8,7 +8,7 @@ from django.db import models
 from django.db.models.signals import post_delete
 from ncdjango.fields import BoundingBoxField, RasterRendererField
 from ncdjango.utils import auto_memoize
-from django.utils.translation import ugettext as _
+from django.utils.translation import ugettext_lazy as _
 
 logger = logging.getLogger(__name__)
 
@@ -82,6 +82,9 @@ class Variable(models.Model):
     time_start = models.DateTimeField(null=True)
     time_end = models.DateTimeField(null=True)
     time_steps = models.PositiveIntegerField(null=True)
+
+    class Meta:
+        unique_together = ('variable', 'service')
 
     @property
     @auto_memoize
@@ -187,6 +190,7 @@ class ProcessingJob(models.Model):
     )
 
     uuid = models.CharField(max_length=32, default=uuid.uuid4, db_index=True)
+    job = models.CharField(max_length=100)
     user = models.ForeignKey(USER_MODEL, null=True, on_delete=models.SET_NULL)
     user_host = models.CharField(max_length=32)
     created = models.DateTimeField(auto_now_add=True)
