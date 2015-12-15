@@ -1,10 +1,16 @@
 import numbers
+import os
 from types import GeneratorType
+
+from django.core.exceptions import ObjectDoesNotExist
 from fiona.collection import Collection
 import netCDF4
 import numpy
 from shapely.geometry.base import BaseGeometry
 import six
+
+from ncdjango.geoprocessing.data import Raster
+from ncdjango.models import Service, SERVICE_DATA_ROOT
 
 
 class ParameterNotValidError(ValueError):
@@ -268,7 +274,7 @@ class DictParameter(Parameter):
     def clean(self, value):
         """Cleans and returns the given value, or raises a ParameterNotValidError exception"""
 
-        if isinstance(value, dict):
+        if isinstance(value, (dict, list)):
             return value
 
         raise ParameterNotValidError
@@ -286,6 +292,20 @@ class NdArrayParameter(Parameter):
             return value
         elif isinstance(value, (list, tuple)):
             return numpy.array(value)
+
+        raise ParameterNotValidError
+
+
+class RasterParameter(Parameter):
+    """Accepts a `Raster` instance"""
+
+    id = 'raster'
+
+    def clean(self, value):
+        """Cleans and returns the given value, or raises a ParameterNotValidError exception"""
+
+        if isinstance(value, Raster):
+            return value
 
         raise ParameterNotValidError
 
@@ -346,3 +366,48 @@ class FeatureDatasetParameter(Parameter):
             return value
 
         raise ParameterNotValidError
+
+
+class RegisteredDatasetParameter(Parameter):
+    """Used by the web API to map registered datasets to inputs"""
+
+    def clean(self, value):
+        """Cleans and returns the given value, or raises a ParameterNotValidError exception"""
+
+        if not isinstance(value, six.string_types):
+            raise ParameterNotValidError
+
+        try:
+            source, value = value.split('://', 1)
+        except ValueError:
+            raise ParameterNotValidError
+
+        if source == 'service':
+            if ':' in value:
+                service_name, variable_name = value.split(':', 1)
+            else:
+                service_name = value
+                variable_name = None
+
+            try:
+                service = Service.objects.get(name=service_name)
+            except ObjectDoesNotExist:
+                raise ParameterNotValidError("Service '{}' not found".format(service_name))
+
+            path = os.path.join(SERVICE_DATA_ROOT, service.data_path)
+            dataset = netCDF4.Dataset(path, 'r')
+
+            if variable_name:
+                try:
+                    variable = service.variable_set.all().get(variable=variable_name)
+                except ObjectDoesNotExist:
+                    raise ParameterNotValidError("Variable '{}' not found".format(variable_name))
+
+                return Raster(
+                    dataset.variables[variable.variable][:], variable.full_extent, variable.x_dimension,
+                    variable.y_dimension
+                )  # Todo: determine y_increasing
+            else:
+                return dataset
+        else:
+            raise ParameterNotValidError('Invalid source: {}'.format(source))
