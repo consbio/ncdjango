@@ -1,5 +1,8 @@
 import operator
+
+import math
 import numpy
+import six
 from ply import lex, yacc
 from rasterio.dtypes import is_ndarray
 
@@ -16,11 +19,11 @@ class Lexer(object):
         'FALSE': "FALSE"
     }
 
-    functions = {'abs', 'min', 'mask', 'max', 'median', 'mean', 'std', 'var'}
+    functions = {'abs', 'min', 'mask', 'max', 'median', 'mean', 'std', 'var', 'floor', 'ceil', 'int', 'float'}
 
     tokens = [
         'COMMA', 'STR', 'ID', 'INT', 'FLOAT', 'ADD', 'SUB', 'POW', 'MUL', 'DIV', 'MOD', 'AND', 'OR', 'EQ', 'LTE', 'GTE',
-        'LT', 'GT', 'LPAREN', 'RPAREN', 'TRUE', 'FALSE', 'FUNC'
+        'LT', 'GT', 'LPAREN', 'RPAREN', 'LBRACK', 'RBRACK', 'TRUE', 'FALSE', 'FUNC'
     ]
 
     t_ignore = ' \t\n'
@@ -41,6 +44,8 @@ class Lexer(object):
     t_GT = r'>'
     t_LPAREN = r'\('
     t_RPAREN = r'\)'
+    t_LBRACK = r'\['
+    t_RBRACK = r'\]'
     t_TRUE = r'(true)|(True)|(TRUE)'
     t_FALSE = r'(false)|(False)|(FALSE)'
 
@@ -63,16 +68,16 @@ class Lexer(object):
 
         return t
 
+    def t_FLOAT(self, t):
+        r"""(\d+\.\d*([eE]-?\d+)?)|(\d*\.\d+([eE]-?\d+)?)"""
+
+        t.value = float(t.value)
+        return t
+
     def t_INT(self, t):
         r"""\d+"""
 
         t.value = int(t.value)
-        return t
-
-    def t_FLOAT(self, t):
-        r"""\d+\.?\d*([eE]-?\d+)?"""
-
-        t.value = float(t.value)
         return t
 
     def t_error(self, t):
@@ -86,6 +91,18 @@ class Lexer(object):
         return set(t.value for t in self.lexer if t.type == 'ID')
 
 
+def op_and(x, y):
+    if is_ndarray(x) and is_ndarray(y):
+        return x & y
+    return x and y
+
+
+def op_or(x, y):
+    if is_ndarray(x) and is_ndarray(y):
+        return x | y
+    return x or y
+
+
 class Parser(object):
     tokens = Lexer.tokens
 
@@ -96,10 +113,10 @@ class Parser(object):
         '/': operator.truediv,
         '**': operator.pow,
         '%': operator.mod,
-        '&&': lambda x, y: x and y,
-        '||': lambda x, y: x or y,
-        'and': lambda x, y: x and y,
-        'or': lambda x, y: x or y,
+        '&&': op_and,
+        '||': op_or,
+        'and': op_and,
+        'or': op_or,
         '==': operator.eq,
         '<=': operator.le,
         '>=': operator.ge,
@@ -246,6 +263,35 @@ class Parser(object):
 
         p[0] = [p[1]]
 
+    def p_factor_item(self, p):
+        """
+        factor : item
+        """
+
+        p[0] = p[1]
+
+    def p_item(self, p):
+        """
+        item : factor LBRACK conditional RBRACK
+        """
+
+        obj = p[1]
+        index = p[3]
+
+        if is_ndarray(obj) or isinstance(obj, (list, tuple)):
+            if not isinstance(index, int):
+                raise TypeError("Not a valid array index: '{}'".format(index))
+
+        elif isinstance(obj, dict):
+            if not isinstance(index, (six.string_types, int)):
+                raise TypeError("Not a valid dictionary index: '{}'".format(index))
+
+        else:
+            raise TypeError("Object does not support indexing: '{}'".format(type(obj)))
+
+        p[0] = obj[index]
+
+
     def _to_ndarray(self, a):
         """Casts Python lists and tuples to a numpy array or raises an AssertionError."""
 
@@ -253,7 +299,7 @@ class Parser(object):
             a = numpy.array(a)
 
         if not is_ndarray(a):
-            raise ValueError("Expected an ndarray but got object of type '{}' instead".format(type(a)))
+            raise TypeError("Expected an ndarray but got object of type '{}' instead".format(type(a)))
 
         return a
 
@@ -340,6 +386,58 @@ class Parser(object):
         """
 
         return numpy.nanvar(self._to_ndarray(a), axis=axis)
+
+    def fn_floor(self, value):
+        """
+        Return the floor of a number. For negative numbers, floor returns a lower value. E.g., `floor(-2.5) == -3`
+
+        :param value: The number.
+        :return: The floor of the number.
+        """
+
+        if is_ndarray(value) or isinstance(value, (list, tuple)):
+            return numpy.floor(self._to_ndarray(value))
+        else:
+            return math.floor(value)
+
+    def fn_ceil(self, value):
+        """
+        Return the ceiling of a number.
+
+        :param value: The number.
+        :return: The ceiling of the number.
+        """
+
+        if is_ndarray(value) or isinstance(value, (list, tuple)):
+            return numpy.ceil(self._to_ndarray(value))
+        else:
+            return math.ceil(value)
+
+    def fn_int(self, value):
+        """
+        Return the value cast to an int.
+
+        :param value: The number.
+        :return: The number as an int.
+        """
+
+        if is_ndarray(value) or isinstance(value, (list, tuple)):
+            return self._to_ndarray(value).astype(int)
+        else:
+            return int(value)
+
+    def fn_float(self, value):
+        """
+        Return the value cast to a float.
+
+        :param value: The number.
+        :return: The number as a float.
+        """
+
+        if is_ndarray(value) or isinstance(value, (list, tuple)):
+            return self._to_ndarray(value).astype(float)
+        else:
+            return float(value)
 
     def p_error(self, p):
         if p:

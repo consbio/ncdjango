@@ -2,11 +2,14 @@ import json
 import os
 
 from clover.geometry.bbox import BBox
+from django.conf import settings
 from netCDF4 import Dataset
 import numpy
 from numpy.ma import masked_array
 import pytest
 from rasterio.dtypes import is_ndarray
+
+settings.configure()
 
 from ncdjango.geoprocessing.data import Raster
 from ncdjango.geoprocessing.evaluation import Lexer, Parser
@@ -286,6 +289,9 @@ class TestEvaluations(object):
         assert p.evaluate('1 + 2 ** 4') == 17
         assert p.evaluate('(1 + 2) ** 4') == 81
         assert p.evaluate('10 % 5') == 0
+        assert p.evaluate('1 + 2.4') == 3.4
+        assert p.evaluate('0.5') == .5
+        assert p.evaluate('.5') == .5
 
     def test_variables(self):
         p = Parser()
@@ -327,6 +333,32 @@ class TestEvaluations(object):
         assert p.evaluate('1 <= 2 and 1 + 1 >= 2') == True
         assert p.evaluate('1 <= 2 - 1 and 1 >= 2 - 1') == True
 
+    def test_item_index(self):
+        p = Parser()
+        context = {
+            'arr1': [1, 2, 3],
+            'arr2': (1, 2, 3),
+            'arr3': numpy.array([1,2,3]),
+            'arr4': [[1,2,3]],
+            'dict': {'one': 1, 'two': 2}
+        }
+
+        assert p.evaluate('arr1[0]', context=context) == 1
+        assert p.evaluate('arr2[0]', context=context) == 1
+        assert p.evaluate('arr3[0]', context=context) == 1
+        assert p.evaluate('dict["one"]', context=context) == 1
+        assert p.evaluate('arr1[1+1]', context=context) == 3
+        assert p.evaluate('arr4[0][1]', context=context) == 2
+
+        with pytest.raises(TypeError):
+            p.evaluate('arr1["one"]', context=context)
+
+        with pytest.raises(IndexError):
+            p.evaluate('arr1[3]', context=context)
+
+        with pytest.raises(KeyError):
+            p.evaluate('dict[1]', context=context)
+
     def test_string(self):
         p = Parser()
 
@@ -349,11 +381,13 @@ class TestEvaluations(object):
 
     def test_ndarray(self):
         p = Parser()
-        arr = numpy.array([1,2,3])
+        arr = numpy.array([1, 2, 3])
         context = {'x': arr}
 
         assert (p.evaluate('x * 2', context=context) == (arr * 2)).all()
         assert (p.evaluate('x <= 2', context=context) == (arr <= 2)).all()
+        assert (p.evaluate('x < 2 or x > 2', context=context) == numpy.array([True, False, True])).all()
+        assert (p.evaluate('x > 1 and x < 3', context=context) == numpy.array([False, True, False])).all()
 
     def test_functions(self):
         p = Parser()
@@ -383,6 +417,17 @@ class TestEvaluations(object):
         assert round(p.evaluate('var(x)', context=context), 3) == 2968.667
         assert (p.evaluate('var(x, 0)', context=nd_context) == numpy.nanvar(nd_arr, 0)).all()
         assert (p.evaluate('var(x, 1)', context=nd_context) == numpy.nanvar(nd_arr, 1)).all()
+        assert p.evaluate('floor(1.7)') == 1
+        assert p.evaluate('floor(-1.3)') == -2
+        assert p.evaluate('ceil(1.3)') == 2
+        assert p.evaluate('ceil(-1.3)') == -1
+        assert (p.evaluate('floor(x)', context=context) == numpy.floor(arr)).all()
+        assert (p.evaluate('ceil(x)', context=context) == numpy.ceil(arr)).all()
+        assert p.evaluate('int(1.3)') == 1
+        assert p.evaluate('float(1.3)') == 1.3
+        assert (p.evaluate('int(x)', context={'x': numpy.array([1.2, 1.3, 1.4])}) == numpy.array([1, 1, 1])).all()
+        assert p.evaluate('int(x)', context={'x': numpy.array([1.2, 1.3, 1.4])}).dtype == int
+        assert p.evaluate('float(x)', context=context).dtype == float
 
         assert (p.evaluate('mask(x, x < 10)', context=context) == numpy.ma.masked_where(arr < 10, arr)).all()
 
