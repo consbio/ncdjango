@@ -31,6 +31,7 @@ class Task(six.with_metaclass(TaskBase)):
     name = ''
     inputs = []  # A list of `Parameter` objects defining accepted inputs for this task
     outputs = []  # A list of `Parameter` objects defining expected outputs for this task
+    allow_extra_args = False  # If true, task may be called with kwargs not defined in `inputs`
 
     def __init__(self):
         self.inputs = copy.copy(self.inputs)
@@ -43,12 +44,16 @@ class Task(six.with_metaclass(TaskBase)):
         """
 
         inputs = ParameterCollection(self.inputs)
+        call_kwargs = {}
 
         for k, v in six.iteritems(kwargs):
             try:
                 inputs[k] = v
             except KeyError:
-                raise TypeError('Unrecognized parameter: {}'.format(k))
+                if self.allow_extra_args:
+                    call_kwargs[k] = v
+                else:
+                    raise TypeError('Unrecognized parameter: {}'.format(k))
 
         if not inputs.is_complete:
             missing_parameters = set(x.name for x in self.inputs if x.required).difference(set(kwargs.keys()))
@@ -58,7 +63,8 @@ class Task(six.with_metaclass(TaskBase)):
             logger.info('Starting task {0}...\nInputs: {1}'.format(self.name, str(inputs.format_args())))
         start = time.time()
         try:
-            ret = self.execute(**inputs.format_args())
+            call_kwargs.update(inputs.format_args())
+            ret = self.execute(**call_kwargs)
         except:
             if self.name:
                 logger.exception('Task {0} failed.'.format(self.name))

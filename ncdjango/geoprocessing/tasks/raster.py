@@ -53,16 +53,18 @@ class SingleArrayExpressionBase(ExpressionMixin, Task):
 
     inputs = [NdArrayParameter('array_in', required=True), StringParameter('expression', required=True)]
     outputs = [NdArrayParameter('array_out')]
+    allow_extra_args = True
 
-    def get_context(self, arr, expr):
+    def get_context(self, arr, expr, context):
         """
         Returns a context dictionary for use in evaluating the expression.
 
         :param arr: The input array.
         :param expr: The input expression.
+        :param context: Evaluation context.
         """
 
-        expression_names = self.get_expression_names(expr)
+        expression_names = [x for x in self.get_expression_names(expr) if x not in set(context.keys()).union(['i'])]
 
         if len(expression_names) != 1:
             raise ValueError('The expression must have exactly one variable.')
@@ -75,10 +77,11 @@ class MaskByExpression(SingleArrayExpressionBase):
 
     name = 'raster:mask_by_expression'
 
-    def execute(self, array_in, expression):
+    def execute(self, array_in, expression, **kwargs):
         """Creates and returns a masked view of the input array."""
 
-        context = self.get_context(array_in, expression)
+        context = self.get_context(array_in, expression, kwargs)
+        context.update(kwargs)
         return ma.masked_where(self.evaluate_expression(expression, context), array_in)
 
 
@@ -87,10 +90,11 @@ class ApplyExpression(SingleArrayExpressionBase):
 
     name = 'raster:apply_expression'
 
-    def execute(self, array_in, expression):
+    def execute(self, array_in, expression, **kwargs):
         """Returns a new array, resulting from applying the expression to the input array."""
 
-        context = self.get_context(array_in, expression)
+        context = self.get_context(array_in, expression, kwargs)
+        context.update(kwargs)
         return self.evaluate_expression(expression, context)
 
 
@@ -104,8 +108,11 @@ class MapByExpression(SingleArrayExpressionBase):
     ]
     outputs = [ListParameter(NdArrayParameter(''), 'arrays_out')]
 
-    def execute(self, arrays_in, expression):
-        return [self.evaluate_expression(expression, self.get_context(a, expression)) for a in arrays_in]
+    def execute(self, arrays_in, expression, **kwargs):
+        return [
+            self.evaluate_expression(expression, dict(self.get_context(a, expression, kwargs), **kwargs, **{'i': i}))
+            for i, a in enumerate(arrays_in)
+            ]
 
 
 class ReduceByExpression(ExpressionMixin, Task):
@@ -118,9 +125,10 @@ class ReduceByExpression(ExpressionMixin, Task):
         NdArrayParameter('initial_array', required=False)
     ]
     outputs = [NdArrayParameter('array_out')]
+    allow_extra_args = True
 
-    def execute(self, arrays_in, expression, initial_array=None):
-        expression_names = self.get_expression_names(expression)
+    def execute(self, arrays_in, expression, initial_array=None, **kwargs):
+        expression_names = [x for x in self.get_expression_names(expression) if x not in set(kwargs.keys())]
 
         if len(expression_names) != 2:
             raise ValueError("The expression must have exactly two variables.")
@@ -130,6 +138,7 @@ class ReduceByExpression(ExpressionMixin, Task):
                 expression_names[0]: x,
                 expression_names[1]: y
             }
+            context.update(kwargs)
             return self.evaluate_expression(expression, context)
 
         args = [reduce_fn, arrays_in]

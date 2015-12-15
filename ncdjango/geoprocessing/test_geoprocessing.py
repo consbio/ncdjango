@@ -189,6 +189,9 @@ class TestRasterTasks(object):
         assert isinstance(result['array_out'], masked_array)
         assert (result['array_out'].mask == (numpy.absolute(numpy.mean(arr) - arr) > numpy.std(arr))).all()
 
+        result = task(array_in=arr, expression='x > y', y=5)
+        assert (result['array_out'].mask == (arr > 5)).all()
+
     def test_apply_expression(self):
         task = ApplyExpression()
         arr = numpy.array([1, 2, 3])
@@ -196,6 +199,9 @@ class TestRasterTasks(object):
         result = task(array_in=arr, expression=expr)
 
         assert is_ndarray(result['array_out'])
+        assert (result['array_out'] == numpy.array([.5, 2, 4.5])).all()
+
+        result = task(array_in=arr, expression='(x ** y) / y', y=2)
         assert (result['array_out'] == numpy.array([.5, 2, 4.5])).all()
 
     def test_load_raster_dataset(self):
@@ -230,6 +236,16 @@ class TestRasterTasks(object):
         assert (arrays_out[0] == arr_1 * 2).all()
         assert (arrays_out[1] == arr_2 * 2).all()
 
+        result = task(arrays_in=[arr_1, arr_2], expression='x * y', y=2)
+        arrays_out = result['arrays_out']
+        assert (arrays_out[0] == arr_1 * 2).all()
+        assert (arrays_out[1] == arr_2 * 2).all()
+
+        result = task(arrays_in=[arr_1, arr_2], expression='x + i')
+        arrays_out = result['arrays_out']
+        assert (arrays_out[0] == arr_1).all()
+        assert (arrays_out[1] == arr_2 + 1).all()
+
     def test_reduce_by_expression(self):
         task = ReduceByExpression()
         arr_1 = numpy.arange(10)
@@ -250,6 +266,9 @@ class TestRasterTasks(object):
 
         assert is_ndarray(array_out)
         assert (array_out == expected).all()
+
+        result = task(arrays_in=[arr_1, arr_2, arr_3], expression='x + (y-z)', z=2)
+        assert (result['array_out'] == (arr_1 + (arr_2 - 2) + (arr_3 - 2))).all()
 
     def test_expression_errors(self):
         task = ApplyExpression()
