@@ -2,13 +2,14 @@ import calendar
 from datetime import timedelta
 import logging
 import uuid
+
+from celery.result import AsyncResult
 from django.conf import settings
 from django.core.exceptions import ValidationError
 from django.db import models
 from django.db.models.signals import post_delete
 from ncdjango.fields import BoundingBoxField, RasterRendererField
 from ncdjango.utils import auto_memoize
-from django.utils.translation import ugettext_lazy as _
 
 logger = logging.getLogger(__name__)
 
@@ -182,25 +183,15 @@ post_delete.connect(temporary_file_deleted, sender=TemporaryFile)
 
 
 class ProcessingJob(models.Model):
-    STATUS_CHOICES = (
-        ('pending', _('Pending')),
-        ('running', _('Running')),
-        ('completed', _('Completed')),
-        ('failed', _('Failed'))
-    )
-
-    uuid = models.CharField(max_length=32, default=uuid.uuid4, db_index=True)
+    uuid = models.CharField(max_length=36, default=uuid.uuid4, db_index=True)
     job = models.CharField(max_length=100)
     user = models.ForeignKey(USER_MODEL, null=True, on_delete=models.SET_NULL)
     user_host = models.CharField(max_length=32)
     created = models.DateTimeField(auto_now_add=True)
-    last_update = models.DateTimeField(auto_now=True)
     celery_id = models.CharField(max_length=100)
-    status = models.CharField(max_length=15, choices=STATUS_CHOICES)
     inputs = models.TextField(null=False, default="{}")
     outputs = models.TextField(null=False, default="{}")
 
-    class Meta:
-        index_together = [
-            ['status', 'created']
-        ]
+    @property
+    def status(self):
+        return AsyncResult(self.celery_id).status.lower()
