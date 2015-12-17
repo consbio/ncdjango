@@ -53,10 +53,16 @@ class RasterRendererField(with_metaclass(models.SubfieldBase, models.TextField))
             data = json.loads(value)
             name = data['name']
             params = data.get('params', {})
+
+            if params.get('background_color'):
+                background_color = Color(*params['background_color'])
+            else:
+                background_color = None
+
             kwargs = {
                 'colormap': [(c[0], Color(*c[1])) for c in data['colormap']],
                 'fill_value': params.get('fill_value'),
-                'background_color': params.get('background_color')
+                'background_color': background_color
             }
 
             if name == "stretched":
