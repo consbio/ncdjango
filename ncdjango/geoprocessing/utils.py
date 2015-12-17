@@ -1,10 +1,22 @@
 import os
 from importlib import import_module
 
+import numpy
+import six
+from clover.netcdf.crs import set_crs
+from clover.netcdf.variable import SpatialCoordinateVariables
+from clover.render.renderers.stretched import StretchedRenderer
+from clover.utilities.color import Color
 from django.conf import settings
 from django.core.exceptions import ImproperlyConfigured
+from django.db import transaction
+from netCDF4 import Dataset
+from rasterio.dtypes import is_ndarray
 
+from ncdjango.geoprocessing.data import is_raster
+from ncdjango.geoprocessing.params import RegisteredDatasetParameter, RasterParameter, NdArrayParameter, ListParameter
 from ncdjango.geoprocessing.workflow import Workflow
+from ncdjango.models import SERVICE_DATA_ROOT, Service, Variable
 
 REGISTERED_JOBS = getattr(settings, 'NC_REGISTERED_JOBS', {})
 
@@ -43,4 +55,70 @@ def get_task_instance(job_name):
 
 
 def process_web_inputs(task, inputs):
-    pass
+    for param in task.inputs:
+        if param.name in inputs:
+            if isinstance(param, (RasterParameter, NdArrayParameter)):
+                inputs[param.name] = RegisteredDatasetParameter(param.name).clean(inputs[param.name])
+            elif isinstance(param, ListParameter) and isinstance(param.param_type, (RasterParameter, NdArrayParameter)):
+                inputs[param.name] = [RegisteredDatasetParameter(param.name).clean(x) for x in inputs[param.name]]
+
+    return task.validate_inputs(inputs)
+
+
+def process_web_outputs(results, job_uuid, publish_raster_results=False):
+    outputs = results.format_args()
+    for k, v in six.iteritems(outputs):
+        if is_raster(v) and publish_raster_results:
+            service_name = '{0}/{1}'.format(job_uuid, k)
+            rel_path = '{}.nc'.format(service_name)
+            abs_path = os.path.join(SERVICE_DATA_ROOT, rel_path)
+            os.makedirs(os.path.dirname(abs_path))
+
+            with Dataset(abs_path, 'w', format='NETCDF4') as ds:
+                if v.extent.projection.is_latlong():
+                    x_var = 'longitude'
+                    y_var = 'latitude'
+                else:
+                    x_var = 'x'
+                    y_var = 'y'
+
+                coord_vars = SpatialCoordinateVariables.from_bbox(v.extent, *reversed(v.shape))
+                coord_vars.add_to_dataset(ds, x_var, y_var)
+
+                data_var = ds.createVariable('data', v.dtype, dimensions=(y_var, x_var))
+                data_var[:] = v
+                set_crs(ds, 'data', v.extent.projection)
+
+            with transaction.atomic():
+                service = Service.objects.create(
+                    name=service_name,
+                    description='This service has been automatically generated from the result of a geoprocessing job.',
+                    data_path=rel_path,
+                    projection=v.extent.projection.srs,
+                    full_extent=v.extent,
+                    initial_extent=v.extent,
+                )
+                Variable.objects.create(
+                    service=service,
+                    index=0,
+                    variable='data',
+                    projection=v.extent.projection.srs,
+                    x_dimension=x_var,
+                    y_dimension=y_var,
+                    name='data',
+                    # Todo: default renderer as setting, or some way to pass it in with job args?
+                    renderer=StretchedRenderer(
+                            [(numpy.min(v).item(), Color(0, 255, 0)), (numpy.max(v).item(), Color(255, 0, 0))]
+                    ),
+                    full_extent=v.extent
+                )
+
+            outputs[k] = service_name
+
+        elif is_ndarray(v):
+            if v.size < numpy.get_printoptions()['threshold']:
+                outputs[k] = v.tolist()
+            else:
+                outputs[k] = str(v)
+
+    return outputs

@@ -1,8 +1,10 @@
+import copy
 import json
 from rest_framework import serializers
 
 from ncdjango.geoprocessing.celery_tasks import run_job
-from ncdjango.geoprocessing.utils import REGISTERED_JOBS, get_task_instance
+from ncdjango.geoprocessing.params import ParameterNotValidError
+from ncdjango.geoprocessing.utils import REGISTERED_JOBS, get_task_instance, process_web_inputs
 from ncdjango.models import ProcessingJob
 
 
@@ -22,14 +24,26 @@ class ProcessingJobSerializer(serializers.ModelSerializer):
         return value
 
     def validate_inputs(self, value):
-        return value or {}
+        if value:
+            try:
+                return json.loads(value, strict=False)
+            except ValueError:
+                raise serializers.ValidationError('Invalid input JSON')
+
+        return {}
+
+    def validate(self, data):
+        try:
+            process_web_inputs(get_task_instance(data['job']), copy.copy(data['inputs']))
+        except (ParameterNotValidError, TypeError) as e:
+            raise serializers.ValidationError('Invalid task input: {}'.format(str(e)))
+
+        return data
 
     def create(self, validated_data):
-        task = get_task_instance(validated_data['job'])
-
-        inputs = json.dumps(validated_data['inputs'])
-        result = run_job.delay(validated_data['job'], inputs)
+        result = run_job.delay(validated_data['job'], validated_data['inputs'])
 
         return ProcessingJob.objects.create(
-            job=validated_data['job'], celery_id=result.id, status='pending', inputs=inputs
+            job=validated_data['job'], celery_id=result.id, status='pending',
+            inputs=json.dumps(validated_data['inputs'])
         )

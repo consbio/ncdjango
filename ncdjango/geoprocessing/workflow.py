@@ -43,27 +43,12 @@ class Task(six.with_metaclass(TaskBase)):
         `ParameterCollection` object representing the task output(s).
         """
 
-        inputs = ParameterCollection(self.inputs)
-        call_kwargs = {}
-
-        for k, v in six.iteritems(kwargs):
-            try:
-                inputs[k] = v
-            except KeyError:
-                if self.allow_extra_args:
-                    call_kwargs[k] = v
-                else:
-                    raise TypeError('Unrecognized parameter: {}'.format(k))
-
-        if not inputs.is_complete:
-            missing_parameters = set(x.name for x in self.inputs if x.required).difference(set(kwargs.keys()))
-            raise TypeError('Missing required parameters: {}'.format(tuple(missing_parameters)))
+        call_kwargs = self.validate_inputs(kwargs)
 
         if self.name:
-            logger.info('Starting task {0}...\nInputs: {1}'.format(self.name, str(inputs.format_args())))
+            logger.info('Starting task {0}...\nInputs: {1}'.format(self.name, str(call_kwargs)))
         start = time.time()
         try:
-            call_kwargs.update(inputs.format_args())
             ret = self.execute(**call_kwargs)
         except:
             if self.name:
@@ -81,6 +66,26 @@ class Task(six.with_metaclass(TaskBase)):
                 outputs[self.outputs[0].name] = ret
 
         return outputs
+
+    def validate_inputs(self, inputs):
+        params = ParameterCollection(self.inputs)
+        call_kwargs = {}
+
+        for k, v in six.iteritems(inputs):
+            try:
+                params[k] = v
+            except KeyError:
+                if self.allow_extra_args:
+                    call_kwargs[k] = v
+                else:
+                    raise TypeError('Unrecognized parameter: {}'.format(k))
+
+        if not params.is_complete:
+            missing_parameters = set(x.name for x in self.inputs if x.required).difference(set(inputs.keys()))
+            raise TypeError('Missing required parameters: {}'.format(tuple(missing_parameters)))
+
+        call_kwargs.update(params.format_args())
+        return call_kwargs
 
     @classmethod
     def by_name(cls, name):

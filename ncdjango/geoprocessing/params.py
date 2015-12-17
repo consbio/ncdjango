@@ -1,5 +1,4 @@
 import numbers
-import os
 from types import GeneratorType
 
 from django.core.exceptions import ObjectDoesNotExist
@@ -10,7 +9,7 @@ from shapely.geometry.base import BaseGeometry
 import six
 
 from ncdjango.geoprocessing.data import Raster
-from ncdjango.models import Service, SERVICE_DATA_ROOT
+from ncdjango.views import NetCdfDatasetMixin
 
 
 class ParameterNotValidError(ValueError):
@@ -368,11 +367,18 @@ class FeatureDatasetParameter(Parameter):
         raise ParameterNotValidError
 
 
-class RegisteredDatasetParameter(Parameter):
+class RegisteredDatasetParameter(NetCdfDatasetMixin, Parameter):
     """Used by the web API to map registered datasets to inputs"""
+
+    def __init__(self, *args, **kwargs):
+        self.service = None
+
+        super(RegisteredDatasetParameter, self).__init__(*args, **kwargs)
 
     def clean(self, value):
         """Cleans and returns the given value, or raises a ParameterNotValidError exception"""
+
+        from ncdjango.models import Service, SERVICE_DATA_ROOT  # To prevent "not configured" issues during tests
 
         if not isinstance(value, six.string_types):
             raise ParameterNotValidError
@@ -390,24 +396,19 @@ class RegisteredDatasetParameter(Parameter):
                 variable_name = None
 
             try:
-                service = Service.objects.get(name=service_name)
+                self.service = Service.objects.get(name=service_name)
             except ObjectDoesNotExist:
                 raise ParameterNotValidError("Service '{}' not found".format(service_name))
 
-            path = os.path.join(SERVICE_DATA_ROOT, service.data_path)
-            dataset = netCDF4.Dataset(path, 'r')
-
             if variable_name:
                 try:
-                    variable = service.variable_set.all().get(variable=variable_name)
+                    variable = self.service.variable_set.all().get(variable=variable_name)
                 except ObjectDoesNotExist:
                     raise ParameterNotValidError("Variable '{}' not found".format(variable_name))
 
-                return Raster(
-                    dataset.variables[variable.variable][:], variable.full_extent, variable.x_dimension,
-                    variable.y_dimension
-                )  # Todo: determine y_increasing
+                data = self.get_grid_for_variable(variable)
+                return Raster(data, variable.full_extent, 1, 0, self.is_y_increasing(variable))
             else:
-                return dataset
+                return self.dataset
         else:
             raise ParameterNotValidError('Invalid source: {}'.format(source))

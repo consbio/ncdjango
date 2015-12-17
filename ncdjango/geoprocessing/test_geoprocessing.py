@@ -2,14 +2,11 @@ import json
 import os
 
 from clover.geometry.bbox import BBox
-from django.conf import settings
 from netCDF4 import Dataset
 import numpy
 from numpy.ma import masked_array
 import pytest
 from rasterio.dtypes import is_ndarray
-
-settings.configure()
 
 from ncdjango.geoprocessing.data import Raster
 from ncdjango.geoprocessing.evaluation import Lexer, Parser
