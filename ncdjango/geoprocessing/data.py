@@ -89,6 +89,16 @@ class Raster(numpy.ma.MaskedArray):
 
         return output
 
+    def __eq__(self, other):
+        obj = super(Raster, self).__eq__(other)
+        Raster.__array_finalize__(obj, self)
+        return obj
+
+    def __ne__(self, other):
+        obj = super(Raster, self).__ne__(other)
+        Raster.__array_finalize__(obj, self)
+        return obj
+
     def __add__(self, other):
         obj = super(Raster, self).__add__(other)
         Raster.__array_finalize__(obj, self)
@@ -146,11 +156,6 @@ class Raster(numpy.ma.MaskedArray):
 
     def __rmod__(self, other):
         obj = super(Raster, self).__rmod__(other)
-        Raster.__array_finalize__(obj, self)
-        return obj
-
-    def __divmod__(self, other):
-        obj = super(Raster, self).__divmod__(other)
         Raster.__array_finalize__(obj, self)
         return obj
 

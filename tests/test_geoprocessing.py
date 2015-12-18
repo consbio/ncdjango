@@ -1,3 +1,6 @@
+from django.conf import settings
+settings.configure()
+
 import json
 import os
 
@@ -16,7 +19,7 @@ from ncdjango.geoprocessing.tasks.raster import MaskByExpression, ApplyExpressio
 from ncdjango.geoprocessing.tasks.raster import MapByExpression, ReduceByExpression
 from ncdjango.geoprocessing.workflow import Task, Workflow
 
-TEST_DATA_DIR = os.path.join(os.path.dirname(__file__), 'test_data')
+TEST_DATA_DIR = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'ncdjango', 'geoprocessing', 'test_data')
 
 
 @pytest.fixture
@@ -460,17 +463,51 @@ class TestDataTypes(object):
         assert isinstance(raster, Raster)
         raster = raster[:]
         assert isinstance(raster, Raster)
+        assert isinstance(raster.extent, BBox)
 
         clipped = raster[3:, 3:-1]
         assert isinstance(clipped, Raster)
+        assert isinstance(raster.extent, BBox)
         assert clipped.extent.as_list() == [3, 0, 10, 7]
 
         raster.y_increasing = True
         clipped = raster[3:, 3:-1]
         assert isinstance(clipped, Raster)
+        assert isinstance(raster.extent, BBox)
         assert clipped.extent.as_list() == [3, 3, 10, 10]
 
         clipped = raster[0]
         assert not isinstance(clipped, Raster)
+        assert isinstance(raster.extent, BBox)
         assert is_ndarray(clipped)
         assert (clipped == numpy.array([0, 1, 2, 3, 4, 5, 6, 7, 8, 9])).all()
+
+        # Make sure binops don't lose extent info
+        assert isinstance((raster == raster).extent, BBox)
+        assert isinstance((raster != raster).extent, BBox)
+        assert isinstance((raster > 2).extent, BBox)
+        assert isinstance((2 > raster).extent, BBox)
+        assert isinstance((raster + 2).extent, BBox)
+        assert isinstance((2 + raster).extent, BBox)
+        assert isinstance((raster - 2).extent, BBox)
+        assert isinstance((2 - raster).extent, BBox)
+        assert isinstance((raster * 2).extent, BBox)
+        assert isinstance((2 * raster).extent, BBox)
+        assert isinstance((raster / 2).extent, BBox)
+        assert isinstance((2 / raster).extent, BBox)
+        assert isinstance((raster // 2).extent, BBox)
+        assert isinstance((2 // raster).extent, BBox)
+        assert isinstance((raster ** 2).extent, BBox)
+        assert isinstance((2 ** raster).extent, BBox)
+        assert isinstance((raster % 2).extent, BBox)
+        assert isinstance((2 % raster).extent, BBox)
+        assert isinstance((raster << 2).extent, BBox)
+        assert isinstance((2 << raster).extent, BBox)
+        assert isinstance((raster >> 2).extent, BBox)
+        assert isinstance((2 >> raster).extent, BBox)
+        assert isinstance((raster | 2).extent, BBox)
+        assert isinstance((2 | raster).extent, BBox)
+        assert isinstance((raster & 2).extent, BBox)
+        assert isinstance((2 & raster).extent, BBox)
+        assert isinstance((raster ^ 2).extent, BBox)
+        assert isinstance((2 ^ raster).extent, BBox)

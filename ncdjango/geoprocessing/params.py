@@ -9,6 +9,7 @@ from shapely.geometry.base import BaseGeometry
 import six
 
 from ncdjango.geoprocessing.data import Raster
+from ncdjango.models import Service
 from ncdjango.views import NetCdfDatasetMixin
 
 
@@ -377,8 +378,6 @@ class RegisteredDatasetParameter(NetCdfDatasetMixin, Parameter):
 
     def clean(self, value):
         """Cleans and returns the given value, or raises a ParameterNotValidError exception"""
-
-        from ncdjango.models import Service, SERVICE_DATA_ROOT  # To prevent "not configured" issues during tests
 
         if not isinstance(value, six.string_types):
             raise ParameterNotValidError
