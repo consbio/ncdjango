@@ -186,7 +186,7 @@ class ProcessingJob(models.Model):
     uuid = models.CharField(max_length=36, default=uuid.uuid4, db_index=True)
     job = models.CharField(max_length=100)
     user = models.ForeignKey(USER_MODEL, null=True, on_delete=models.SET_NULL)
-    user_host = models.CharField(max_length=32)
+    user_ip = models.CharField(max_length=32)
     created = models.DateTimeField(auto_now_add=True)
     celery_id = models.CharField(max_length=100)
     inputs = models.TextField(null=False, default="{}")

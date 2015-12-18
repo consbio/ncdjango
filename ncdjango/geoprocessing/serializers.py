@@ -42,8 +42,10 @@ class ProcessingJobSerializer(serializers.ModelSerializer):
 
     def create(self, validated_data):
         result = run_job.delay(validated_data['job'], validated_data['inputs'])
+        request = self.context['request']
 
         return ProcessingJob.objects.create(
             job=validated_data['job'], celery_id=result.id, status='pending',
-            inputs=json.dumps(validated_data['inputs'])
+            inputs=json.dumps(validated_data['inputs']), user_ip=request.META.get('REMOTE_ADDR'),
+            user=request.user if request.user.is_authenticated() else None
         )
