@@ -311,6 +311,17 @@ class TestEvaluations(object):
         assert p.evaluate('1 + 2.4') == 3.4
         assert p.evaluate('0.5') == .5
         assert p.evaluate('.5') == .5
+        assert p.evaluate('-1') == -1
+        assert p.evaluate('-.124') == -.124
+        assert p.evaluate('-(1 + 2)') == -3
+        assert p.evaluate('-x[0]', context={'x': [1]}) == -1
+        assert p.evaluate('x[-1]', context={'x': [1, 2]}) == 2
+        assert p.evaluate('+1') == 1
+        assert p.evaluate('+.124') == .124
+        assert p.evaluate('+(1 + 2)') == 3
+        assert p.evaluate('+x[0]', context={'x': [1]}) == 1
+        assert p.evaluate('x[+1]', context={'x': [1, 2]}) == 2
+
 
     def test_variables(self):
         p = Parser()

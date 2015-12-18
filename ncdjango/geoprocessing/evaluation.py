@@ -173,8 +173,8 @@ class Parser(object):
 
     def p_factor_unary_operators(self, p):
         """
-        factor : SUB factor
-               | ADD factor
+        term : SUB factor
+             | ADD factor
         """
 
         p[0] = p[2]
@@ -265,14 +265,7 @@ class Parser(object):
 
     def p_factor_item(self, p):
         """
-        factor : item
-        """
-
-        p[0] = p[1]
-
-    def p_item(self, p):
-        """
-        item : factor LBRACK conditional RBRACK
+        factor : factor LBRACK conditional RBRACK
         """
 
         obj = p[1]
