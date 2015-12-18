@@ -46,7 +46,7 @@ class RangeView(DataViewBase):
                 'max': int(max_value) if max_value.is_integer() else max_value
             }
 
-            return HttpResponse(json.dumps(data))
+            return HttpResponse(json.dumps(data), content_type='application/json')
         finally:
             self.close_dataset()
 
@@ -79,7 +79,7 @@ class ClassifyView(DataViewBase):
                 'min': int(min_value) if min_value.is_integer() else min_value
             }
 
-            return HttpResponse(json.dumps(data))
+            return HttpResponse(json.dumps(data), content_type='application/json')
         finally:
             self.close_dataset()
 
@@ -104,7 +104,7 @@ class UniqueValuesView(DataViewBase):
                 if not math.isnan(x)
             ]
 
-            return HttpResponse(json.dumps(data))
+            return HttpResponse(json.dumps(data), content_type='application/json')
         finally:
             self.close_dataset()
 
