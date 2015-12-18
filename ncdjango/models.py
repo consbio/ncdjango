@@ -195,3 +195,10 @@ class ProcessingJob(models.Model):
     @property
     def status(self):
         return AsyncResult(self.celery_id).status.lower()
+
+
+class ProcessingResultService(models.Model):
+    job = models.ForeignKey(ProcessingJob)
+    service = models.ForeignKey(Service)
+    is_temporary = models.BooleanField(default=True)
+    created = models.DateTimeField(auto_now_add=True)

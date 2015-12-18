@@ -16,7 +16,7 @@ from rasterio.dtypes import is_ndarray
 from ncdjango.geoprocessing.data import is_raster
 from ncdjango.geoprocessing.params import RegisteredDatasetParameter, RasterParameter, NdArrayParameter, ListParameter
 from ncdjango.geoprocessing.workflow import Workflow
-from ncdjango.models import SERVICE_DATA_ROOT, Service, Variable
+from ncdjango.models import SERVICE_DATA_ROOT, Service, Variable, ProcessingResultService
 
 REGISTERED_JOBS = getattr(settings, 'NC_REGISTERED_JOBS', {})
 
@@ -65,11 +65,12 @@ def process_web_inputs(task, inputs):
     return task.validate_inputs(inputs)
 
 
-def process_web_outputs(results, job_uuid, publish_raster_results=False):
+def process_web_outputs(results, job, publish_raster_results=False, renderer_or_fn=None):
     outputs = results.format_args()
+
     for k, v in six.iteritems(outputs):
         if is_raster(v) and publish_raster_results:
-            service_name = '{0}/{1}'.format(job_uuid, k)
+            service_name = '{0}/{1}'.format(job.uuid, k)
             rel_path = '{}.nc'.format(service_name)
             abs_path = os.path.join(SERVICE_DATA_ROOT, rel_path)
             os.makedirs(os.path.dirname(abs_path))
@@ -89,6 +90,15 @@ def process_web_outputs(results, job_uuid, publish_raster_results=False):
                 data_var[:] = v
                 set_crs(ds, 'data', v.extent.projection)
 
+            if callable(renderer_or_fn):
+                renderer = renderer_or_fn(v)
+            elif renderer_or_fn is None:
+                renderer = StretchedRenderer(
+                    [(numpy.min(v).item(), Color(0, 0, 0)), (numpy.max(v).item(), Color(255, 255, 255))]
+                )
+            else:
+                renderer = renderer_or_fn
+
             with transaction.atomic():
                 service = Service.objects.create(
                     name=service_name,
@@ -106,12 +116,10 @@ def process_web_outputs(results, job_uuid, publish_raster_results=False):
                     x_dimension=x_var,
                     y_dimension=y_var,
                     name='data',
-                    # Todo: default renderer as setting, or some way to pass it in with job args?
-                    renderer=StretchedRenderer(
-                            [(numpy.min(v).item(), Color(0, 255, 0)), (numpy.max(v).item(), Color(255, 0, 0))]
-                    ),
+                    renderer=renderer,
                     full_extent=v.extent
                 )
+                ProcessingResultService.objects.create(job=job, service=service)
 
             outputs[k] = service_name
 
