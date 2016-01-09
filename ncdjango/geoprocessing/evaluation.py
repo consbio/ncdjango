@@ -19,7 +19,9 @@ class Lexer(object):
         'FALSE': "FALSE"
     }
 
-    functions = {'abs', 'min', 'mask', 'max', 'median', 'mean', 'std', 'var', 'floor', 'ceil', 'int', 'float'}
+    functions = {
+        'abs', 'get_mask', 'min', 'mask', 'max', 'median', 'mean', 'std', 'var', 'floor', 'ceil', 'int', 'float'
+    }
 
     tokens = [
         'COMMA', 'STR', 'ID', 'INT', 'FLOAT', 'ADD', 'SUB', 'POW', 'MUL', 'DIV', 'MOD', 'AND', 'OR', 'EQ', 'LTE', 'GTE',
@@ -308,6 +310,21 @@ class Parser(object):
             return numpy.absolute(value)
         else:
             return abs(value)
+
+    def fn_get_mask(self, value):
+        """
+        Return an array mask.
+
+        :param value: The array.
+        :return: The array mask.
+        """
+
+        value = self._to_ndarray(value)
+
+        if numpy.ma.is_masked(value):
+            return value.mask
+        else:
+            return numpy.zeros(value.shape).astype(bool)
 
     def fn_min(self, a, axis=None):
         """
