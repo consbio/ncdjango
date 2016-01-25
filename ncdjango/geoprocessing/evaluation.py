@@ -1,6 +1,7 @@
 import operator
 
 import math
+
 import numpy
 import six
 from ply import lex, yacc
@@ -143,7 +144,7 @@ class Parser(object):
                     | term MOD factor
         """
 
-        p[0] = self.binary_operators[p[2]](p[1], p[3])
+        p[0] = Instruction("op(left, right)", context={'op': self.binary_operators[p[2]], 'left': p[1], 'right': p[3]})
 
     def p_conditional_condition(self, p):
         """
@@ -181,7 +182,7 @@ class Parser(object):
 
         p[0] = p[2]
         if p[1] == '-':
-            p[0] *= -1
+            p[0] = Instruction('-x', context={'x': p[0]})
 
     def p_factor_number(self, p):
         """
@@ -231,10 +232,17 @@ class Parser(object):
         factor : ID
         """
 
-        try:
-            p[0] = self.context[p[1]]
-        except KeyError:
-            raise NameError("name '{}' is not defined".format(p[1]))
+        def resolve_id(key, context):
+            try:
+                return context[key]
+            except KeyError:
+                raise NameError("name '{}' is not defined".format(key))
+
+        p[0] = Instruction('resolve_id(key, context)', context={
+            'resolve_id': resolve_id,
+            'key': p[1],
+            'context': self.context
+        })
 
     def p_factor_fn(self, p):
         """
@@ -249,7 +257,11 @@ class Parser(object):
         """
 
         fn = getattr(self, 'fn_{0}'.format(p[1]))
-        p[0] = fn(*p[3])
+        p[0] = Instruction('fn(*[x.execute() if isinstance(x, Instruction) else x for x in args])', context={
+            'fn': fn,
+            'args': p[3],
+            'Instruction': Instruction
+        })
 
     def p_arguments(self, p):
         """
@@ -270,22 +282,25 @@ class Parser(object):
         factor : factor LBRACK conditional RBRACK
         """
 
-        obj = p[1]
-        index = p[3]
+        def resolve_item(obj, index):
+            if is_ndarray(obj) or isinstance(obj, (list, tuple)):
+                if not isinstance(index, int):
+                    raise TypeError("Not a valid array index: '{}'".format(index))
 
-        if is_ndarray(obj) or isinstance(obj, (list, tuple)):
-            if not isinstance(index, int):
-                raise TypeError("Not a valid array index: '{}'".format(index))
+            elif isinstance(obj, dict):
+                if not isinstance(index, (six.string_types, int)):
+                    raise TypeError("Not a valid dictionary index: '{}'".format(index))
 
-        elif isinstance(obj, dict):
-            if not isinstance(index, (six.string_types, int)):
-                raise TypeError("Not a valid dictionary index: '{}'".format(index))
+            else:
+                raise TypeError("Object does not support indexing: '{}'".format(type(obj)))
 
-        else:
-            raise TypeError("Object does not support indexing: '{}'".format(type(obj)))
+            return obj[index]
 
-        p[0] = obj[index]
-
+        p[0] = Instruction('resolve_item(obj, index)', context={
+            'resolve_item': resolve_item,
+            'obj': p[1],
+            'index': p[3]
+        })
 
     def _to_ndarray(self, a):
         """Casts Python lists and tuples to a numpy array or raises an AssertionError."""
@@ -457,9 +472,32 @@ class Parser(object):
 
     def __init__(self):
         self.context = {}
-        self.lexer = Lexer().lexer
         self.parser = yacc.yacc(module=self)
+        self.lexer = Lexer().lexer
 
     def evaluate(self, expr, context={}):
-        self.context = context
-        return self.parser.parse(expr, lexer=self.lexer)
+        try:
+            self.context = context
+            result = self.parser.parse(expr, lexer=self.lexer)
+
+            return result.execute() if isinstance(result, Instruction) else result
+        finally:
+            self.context = {}
+            self.parser.parse('1', lexer=self.lexer)  # Clear out references to potentially large objects
+
+
+class Instruction(object):
+    """A compiled statement to be executed by `exec()`"""
+
+    def __init__(self, statement, context={}):
+        self.statement = statement
+        self.compiled = compile(statement, '<string>', 'eval')
+        self.locals = context
+
+    def execute(self):
+        context = {k: v.execute() if isinstance(v, Instruction) else v for k, v in six.iteritems(self.locals)}
+
+        try:
+            return eval(self.compiled, None, context)
+        finally:
+            context = None
