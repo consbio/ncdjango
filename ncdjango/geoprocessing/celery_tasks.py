@@ -1,3 +1,4 @@
+import copy
 import json
 import logging
 import os
@@ -38,7 +39,7 @@ def run_job(self, job_name, inputs):
         raise ImproperlyConfigured('Invalid renderer: {}'.format(results_renderer))
 
     t = get_task_instance(job_name)
-    results = t(**process_web_inputs(t, inputs))
+    results = t(**process_web_inputs(t, copy.copy(inputs)))
     publish_raster_results = job_info.get('publish_raster_results', False)
 
     job = ProcessingJob.objects.get(celery_id=self.request.id)
