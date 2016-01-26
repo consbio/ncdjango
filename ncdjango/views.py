@@ -109,7 +109,7 @@ class NetCdfDatasetMixin(object):
                 slices.append(0)
                 dimensions.remove(dimension)
 
-        data = numpy.copy(data[tuple(slices)])
+        data = data[tuple(slices)]
 
         transpose_args = [dimensions.index(variable.y_dimension), dimensions.index(variable.x_dimension)]
         data = data.transpose(*transpose_args)

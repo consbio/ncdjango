@@ -1,11 +1,15 @@
+import logging
 import operator
 
 import math
 
 import numpy
 import six
+import time
 from ply import lex, yacc
 from rasterio.dtypes import is_ndarray
+
+logger = logging.getLogger(__name__)
 
 
 class Lexer(object):
@@ -476,12 +480,14 @@ class Parser(object):
         self.lexer = Lexer().lexer
 
     def evaluate(self, expr, context={}):
+        start = time.time()
         try:
             self.context = context
             result = self.parser.parse(expr, lexer=self.lexer)
 
             return result.execute() if isinstance(result, Instruction) else result
         finally:
+            logger.info('Executed expression in {:.3f} seconds: {}'.format(time.time()-start, expr))
             self.context = {}
             self.parser.parse('1', lexer=self.lexer)  # Clear out references to potentially large objects
 

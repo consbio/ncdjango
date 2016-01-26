@@ -1,5 +1,11 @@
+import copy
+
+import numpy
 from numpy import ma
 import six
+from rasterio.dtypes import is_ndarray
+
+from ncdjango.geoprocessing.data import is_raster, Raster
 from ncdjango.geoprocessing.evaluation import Lexer, Parser
 from ncdjango.geoprocessing.exceptions import ExecutionError
 from ncdjango.geoprocessing.params import NdArrayParameter, StringParameter, RasterDatasetParameter, ListParameter
@@ -40,7 +46,19 @@ class ExpressionMixin(object):
 
     def evaluate_expression(self, expression, context={}):
         try:
-            return Parser().evaluate(expression, context=context)
+            # Operations against rasters are really slow, so take a regular array view, then back to a raster later
+            expr_context = {k: v.view(numpy.ndarray) if is_raster(v) else v for k, v in six.iteritems(context)}
+
+            result = Parser().evaluate(expression, context=expr_context)
+
+            if is_ndarray(result):
+                for value in six.itervalues(context):
+                    if is_raster(value):
+                        result = Raster(result, value.extent, value.x_dim, value.y_dim, value.y_increasing)
+                        break
+
+            return result
+
         except (SyntaxError, NameError) as e:
             raise ExecutionError(
                 'The expression is invalid ({0}): {1}\nContext: {2}'.format(str(e), expression, str(context)),

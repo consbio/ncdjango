@@ -46,7 +46,7 @@ class Task(six.with_metaclass(TaskBase)):
         call_kwargs = self.validate_inputs(kwargs)
 
         if self.name:
-            logger.info('Starting task {0}...\nInputs: {1}'.format(self.name, str(call_kwargs)))
+            logger.info('Starting task {0}...'.format(self.name))
         start = time.time()
         try:
             ret = self.execute(**call_kwargs)
@@ -56,7 +56,6 @@ class Task(six.with_metaclass(TaskBase)):
             raise
         if self.name:
             logger.info('Task {0} finished in {1:.3f} seconds'.format(self.name, time.time() - start))
-
 
         if isinstance(ret, ParameterCollection):
             outputs = ret
@@ -129,6 +128,7 @@ class Workflow(Task):
         self.description = description
 
         self.nodes_by_id = {}
+        self.dependents_by_node_id = {}
         self.output_mapping = {}  # {<workflow output param name>: (<node id>, <task output param name>), ...}
 
     def _execute_node(self, node, workflow_inputs):
@@ -146,6 +146,11 @@ class Workflow(Task):
 
                 if value[1] in dependency.outputs:
                     task_inputs[name] = dependency.outputs[value[1]]
+
+                dependents = self.dependents_by_node_id[dependency.id]
+                dependents.remove(node.id)
+                if not dependents:
+                    dependency.outputs = None  # Allow release of outputs which are no longer needed
             elif source == 'literal':
                 task_inputs[name] = value
             else:
@@ -164,6 +169,10 @@ class Workflow(Task):
                 self._execute_node(node, kwargs)
 
             outputs[param] = node.outputs[name]
+
+        for node in six.itervalues(self.nodes_by_id):
+            node.outputs = None
+            node.completed = False
 
         return outputs
 
@@ -185,6 +194,12 @@ class Workflow(Task):
         node = WorkflowNode(node_id, task, inputs)
         self.nodes_by_id[node_id] = node
 
+        for source, value in six.itervalues(inputs):
+            if source == 'dependency':
+                dependents = self.dependents_by_node_id.get(value[0], set())
+                dependents.add(node_id)
+                self.dependents_by_node_id[value[0]] = dependents
+
     def map_output(self, node_id, node_output_name, parameter_name):
         """
         Maps the output from a node to a workflow output.
@@ -195,6 +210,10 @@ class Workflow(Task):
         """
 
         self.output_mapping[parameter_name] = (node_id, node_output_name)
+
+        dependents = self.dependents_by_node_id.get(node_id, set())
+        dependents.add('output_{}'.format(parameter_name))
+        self.dependents_by_node_id[node_id] = dependents
 
     def to_json(self, indent=None):
         """Serialize this workflow to JSON"""
