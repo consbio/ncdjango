@@ -1,12 +1,10 @@
-import copy
-
 import numpy
 from numpy import ma
 import six
 from numpy.ma.core import is_masked
 from rasterio.dtypes import is_ndarray
 
-from ncdjango.geoprocessing.data import is_raster, Raster
+from ncdjango.geoprocessing.data import Raster
 from ncdjango.geoprocessing.evaluation import Lexer, Parser
 from ncdjango.geoprocessing.exceptions import ExecutionError
 from ncdjango.geoprocessing.params import NdArrayParameter, StringParameter, RasterDatasetParameter, ListParameter
