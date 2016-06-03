@@ -52,7 +52,7 @@ def get_definition_from_renderer(renderer):
     }
 
     if renderer.fill_value:
-        config['options']['fill_value'] = renderer.fill_value.to_hex()
+        config['options']['fill_value'] = renderer.fill_value
 
     if isinstance(renderer, StretchedRenderer):
         config['type'] = 'stretched'

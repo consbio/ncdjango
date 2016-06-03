@@ -11,13 +11,13 @@ from django.views.generic.detail import DetailView
 from django.views.generic.list import ListView
 import pyproj
 import six
-from ncdjango.config import RenderConfiguration, IdentifyConfiguration, LegendConfiguration
+from ncdjango.config import RenderConfiguration, IdentifyConfiguration, LegendConfiguration, ImageConfiguration
 from ncdjango.exceptions import ConfigurationError
 from ncdjango.interfaces.arcgis.forms import GetImageForm, IdentifyForm
 from ncdjango.interfaces.arcgis.utils import date_to_timestamp, extent_to_envelope
 from ncdjango.models import Service, Variable
 from ncdjango.utils import proj4_to_epsg
-from ncdjango.views import GetImageViewBase, IdentifyViewBase, LegendViewBase
+from ncdjango.views import GetImageViewBase, IdentifyViewBase, LegendViewBase, FORCE_WEBP
 
 ALLOW_BEST_FIT_TIME_INDEX = getattr(settings, 'NC_ALLOW_BEST_FIT_TIME_INDEX', True)
 
@@ -186,11 +186,11 @@ class LayerDetailView(DetailView):
         return data
 
 
-class ArcGisMapServerMixin(object):
+class ArcGISMapServerMixin(object):
     def __init__(self, *args, **kwargs):
         self.form_data = {}
 
-        return super(ArcGisMapServerMixin, self).__init__(*args, **kwargs)
+        return super(ArcGISMapServerMixin, self).__init__(*args, **kwargs)
 
     def process_form_data(self, defaults, data):
         form_params = defaults
@@ -239,7 +239,7 @@ class ArcGisMapServerMixin(object):
         return configurations
 
 
-class GetImageView(ArcGisMapServerMixin, GetImageViewBase):
+class GetImageView(ArcGISMapServerMixin, GetImageViewBase):
     form_class = GetImageForm
 
     def _get_form_defaults(self):
@@ -259,22 +259,25 @@ class GetImageView(ArcGisMapServerMixin, GetImageViewBase):
     def get_service_name(self, request, *args, **kwargs):
         return kwargs['service_name']
 
-    def format_image(self, image, image_format):
+    def format_image(self, image, image_format, **kwargs):
         """Returns an image in the request format"""
 
         image_format = image_format.lower()
+        accept = self.request.META['HTTP_ACCEPT'].split(',')
 
-        if image_format == 'png8':
-            # Transparency for PNG8 isn't working at the moment...
-            # alpha = image.split()[-1]
-            # image = image.convert('RGB')
-            # image.convert('P', palette=Image.ADAPTIVE, colors=255)
-            # image.paste(255, Image.eval(alpha, lambda x: 255 if x <= 128 else 0))
+        if FORCE_WEBP and 'image/webp' in accept:
+            image_format = 'webp'
+        elif image_format == 'png8':
+            alpha = image.split()[-1]
+            image = image.convert('RGB')
+            image = image.convert('P', palette=Image.ADAPTIVE, colors=255)
+            image.paste(255, Image.eval(alpha, lambda x: 255 if x <= 128 else 0))
             image_format = 'png'
+            kwargs['transparency'] = 255
         elif image_format in ('png32', 'png24'):
             image_format = 'png'
 
-        return super(GetImageView, self).format_image(image, image_format)
+        return super(GetImageView, self).format_image(image, image_format, **kwargs)
 
     def get_render_configurations(self, request, **kwargs):
         """Render image interface"""
@@ -282,19 +285,17 @@ class GetImageView(ArcGisMapServerMixin, GetImageViewBase):
         data = self.process_form_data(self._get_form_defaults(), kwargs)
         variable_set = self.get_variable_set(self.service.variable_set.order_by('index'), data)
 
-        config_params = {
-            'extent': data['bbox'],
-            'size': data['size'],
-            'image_format': data['image_format'],
-            'background_color': TRANSPARENT_BACKGROUND_COLOR if data.get('transparent') else DEFAULT_BACKGROUND_COLOR
-        }
-
-        return self.apply_time_to_configurations(
-            [RenderConfiguration(v, **config_params) for v in variable_set], data
+        base_config = ImageConfiguration(
+            extent=data['bbox'],
+            size=data['size'],
+            image_format=data['image_format'],
+            background_color=TRANSPARENT_BACKGROUND_COLOR if data.get('transparent') else DEFAULT_BACKGROUND_COLOR
         )
 
+        return base_config, self.apply_time_to_configurations([RenderConfiguration(v) for v in variable_set], data)
 
-class IdentifyView(ArcGisMapServerMixin, IdentifyViewBase):
+
+class IdentifyView(ArcGISMapServerMixin, IdentifyViewBase):
     form_class = IdentifyForm
 
     def _get_form_defaults(self):
@@ -346,7 +347,7 @@ class IdentifyView(ArcGisMapServerMixin, IdentifyViewBase):
         )
 
 
-class LegendView(ArcGisMapServerMixin, LegendViewBase):
+class LegendView(ArcGISMapServerMixin, LegendViewBase):
     def set_legend_sizes(self, configurations):
         for config in configurations:
             if isinstance(config.renderer, StretchedRenderer):
