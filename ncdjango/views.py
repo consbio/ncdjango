@@ -325,22 +325,26 @@ class IdentifyViewBase(NetCdfDatasetMixin, ServiceView):
                     config.geometry, config.projection, pyproj.Proj(str(self.service.projection))
                 )
                 assert isinstance(geometry, Point)  # Only point-based identify is supported
-                variable_data = self.get_grid_for_variable(config.variable, time_index=time_index)
 
+                dimensions = self.get_grid_spatial_dimensions(config.variable)
                 cell_size = (
-                    float(variable.full_extent.width) / variable_data.shape[1],
-                    float(variable.full_extent.height) / variable_data.shape[0]
+                    float(variable.full_extent.width) / dimensions[0],
+                    float(variable.full_extent.height) / dimensions[1]
                 )
-
                 cell_index = [
                     int(float(geometry.x-variable.full_extent.xmin) / cell_size[0]),
                     int(float(geometry.y-variable.full_extent.ymin) / cell_size[1])
                 ]
                 if not self.is_y_increasing(variable):
-                    cell_index[1] = variable_data.shape[0] - cell_index[1] - 1
+                    cell_index[1] = dimensions[1] - cell_index[1] - 1
 
-                if variable_data.shape[1] > cell_index[0] >= 0 and variable_data.shape[0] > cell_index[1] >= 0:
-                    data[variable] = float(variable_data[cell_index[1]][cell_index[0]])
+                variable_data = self.get_grid_for_variable(
+                    config.variable, time_index=time_index, x_slice=(cell_index[0], cell_index[0] + 1),
+                    y_slice=(cell_index[1], cell_index[1] + 1)
+                )
+
+                if len(variable_data):
+                    data[variable] = float(variable_data[0][0])
 
             data, content_type = self.serialize_data(data)
             return self.create_response(request, data, content_type=content_type)
