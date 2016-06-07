@@ -6,8 +6,8 @@ setup(
     keywords='netcdf,django,map server',
     version='0.3.2',
     packages=[
-        'ncdjango', 'ncdjango.migrations', 'ncdjango.interfaces', 'ncdjango.interfaces.arcgis',
-        'ncdjango.interfaces.arcgis_extended', 'ncdjango.interfaces.data'
+        'ncdjango', 'ncdjango.geoprocessing', 'ncdjango.migrations', 'ncdjango.interfaces',
+        'ncdjango.interfaces.arcgis', 'ncdjango.interfaces.arcgis_extended', 'ncdjango.interfaces.data'
     ],
     install_requires=[
         'clover', 'six', 'requests', 'Django>=1.7.0', 'Pillow>=2.9.0', 'Shapely>=1.3.2', 'GDAL>=1.11.0',
