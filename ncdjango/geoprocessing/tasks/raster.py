@@ -132,10 +132,10 @@ class MapByExpression(SingleArrayExpressionBase):
     outputs = [ListParameter(NdArrayParameter(''), 'arrays_out')]
 
     def execute(self, arrays_in, expression, **kwargs):
-        return [
+        return (
             self.evaluate_expression(expression, dict(self.get_context(a, expression, kwargs), **kwargs, **{'i': i}))
             for i, a in enumerate(arrays_in)
-            ]
+        )
 
 
 class ReduceByExpression(ExpressionMixin, Task):
