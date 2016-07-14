@@ -33,10 +33,11 @@ class ProcessingJobSerializer(serializers.ModelSerializer):
         return {}
 
     def validate(self, data):
-        try:
-            process_web_inputs(get_task_instance(data['job']), copy.copy(data['inputs']))
-        except (ParameterNotValidError, TypeError) as e:
-            raise serializers.ValidationError('Invalid task input: {}'.format(str(e)))
+        task = get_task_instance(data['job'])
+        missing_params = set(x.name for x in task.inputs if x.required).difference(set(data['inputs'].keys()))
+
+        if missing_params:
+            raise serializers.ValidationError('Missing task inputs: {}'.format(','.join(missing_params)))
 
         return data
 
