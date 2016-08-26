@@ -25,7 +25,8 @@ class Lexer(object):
     }
 
     functions = {
-        'abs', 'get_mask', 'min', 'mask', 'max', 'median', 'mean', 'std', 'var', 'floor', 'ceil', 'int', 'float'
+        'abs', 'get_mask', 'min', 'mask', 'max', 'median', 'mean', 'std', 'var', 'floor', 'ceil', 'int', 'int8',
+        'float'
     }
 
     tokens = [
@@ -452,6 +453,19 @@ class Parser(object):
 
         if is_ndarray(value) or isinstance(value, (list, tuple)):
             return self._to_ndarray(value).astype(int)
+        else:
+            return int(value)
+
+    def fn_int8(self, value):
+        """
+        Return the value cast to an 8-bit signed integer (numpy array) or a Python int (single value)
+
+        :param value: The number or array
+        :return: The number or array as int/int8
+        """
+
+        if is_ndarray(value) or isinstance(value, (list, tuple)):
+            return self._to_ndarray(value).astype(numpy.int8)
         else:
             return int(value)
 

@@ -11,6 +11,8 @@ from django.conf import settings
 from django.core.exceptions import ImproperlyConfigured
 from django.db import transaction
 from netCDF4 import Dataset
+
+from numpy.ma.core import is_masked
 from rasterio.dtypes import is_ndarray
 
 from ncdjango.geoprocessing.data import is_raster
@@ -86,7 +88,8 @@ def process_web_outputs(results, job, publish_raster_results=False, renderer_or_
                 coord_vars = SpatialCoordinateVariables.from_bbox(v.extent, *reversed(v.shape))
                 coord_vars.add_to_dataset(ds, x_var, y_var)
 
-                data_var = ds.createVariable('data', v.dtype, dimensions=(y_var, x_var))
+                fill_value = v.fill_value if is_masked(v) else None
+                data_var = ds.createVariable('data', v.dtype, dimensions=(y_var, x_var), fill_value=fill_value)
                 data_var[:] = v
                 set_crs(ds, 'data', v.extent.projection)
 
