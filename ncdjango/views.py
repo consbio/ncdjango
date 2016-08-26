@@ -30,6 +30,7 @@ from ncdjango.models import Service, SERVICE_DATA_ROOT, TemporaryFile
 from ncdjango.utils import project_geometry
 
 FORCE_WEBP = getattr(settings, 'NC_FORCE_WEBP', False)
+ENABLE_STRIDING = getattr(settings, 'NC_ENABLE_STRIDING', False)
 
 
 class ServiceView(View):
@@ -194,7 +195,7 @@ class GetImageViewBase(NetCdfDatasetMixin, ServiceView):
 
         return HttpResponse(content=image, content_type=content_type)
 
-    def get_image(self, config, grid_bounds):
+    def get_image(self, config, grid_bounds, size):
         variable = config.variable
         service = variable.service
 
@@ -207,6 +208,22 @@ class GetImageViewBase(NetCdfDatasetMixin, ServiceView):
             variable, time_index=time_index, x_slice=(grid_bounds[0], grid_bounds[2]),
             y_slice=(grid_bounds[1], grid_bounds[3])
         )
+
+        if ENABLE_STRIDING:
+            y_scale = data.shape[0] / size[1]
+            x_scale = data.shape[1] / size[0]
+
+            if y_scale > 2:
+                y_slice = slice(None, None, math.floor(y_scale))
+            else:
+                y_slice = slice(None, None, 1)
+
+            if x_scale > 2:
+                x_slice = slice(None, None, math.floor(x_scale))
+            else:
+                x_slice = slice(None, None, 1)
+
+            data = data[y_slice, x_slice]
 
         if config.renderer.fill_value is None and hasattr(data, 'fill_value'):
             config.renderer.fill_value = data.fill_value
@@ -266,7 +283,7 @@ class GetImageViewBase(NetCdfDatasetMixin, ServiceView):
                     grid_bounds[1] = y_min
                     grid_bounds[3] = y_max
 
-                image = GeoImage(self.get_image(config, grid_bounds), grid_extent)
+                image = GeoImage(self.get_image(config, grid_bounds, size), grid_extent)
                 warped = image.warp(extent, size).image
                 final_image.paste(warped, None, warped)
 
