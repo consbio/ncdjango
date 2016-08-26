@@ -7,7 +7,8 @@ from rasterio.dtypes import is_ndarray
 from ncdjango.geoprocessing.data import Raster
 from ncdjango.geoprocessing.evaluation import Lexer, Parser
 from ncdjango.geoprocessing.exceptions import ExecutionError
-from ncdjango.geoprocessing.params import NdArrayParameter, StringParameter, RasterDatasetParameter, ListParameter
+from ncdjango.geoprocessing.params import NdArrayParameter, StringParameter, RasterDatasetParameter, ListParameter, \
+    BooleanParameter
 from ncdjango.geoprocessing.workflow import Task
 from netCDF4 import Dataset
 
@@ -127,15 +128,18 @@ class MapByExpression(SingleArrayExpressionBase):
     name = 'raster:map_by_expression'
     inputs = [
         ListParameter(NdArrayParameter(''), 'arrays_in', required=True),
-        StringParameter('expression', required=True)
+        StringParameter('expression', required=True),
+        BooleanParameter('generator', required=False)
     ]
     outputs = [ListParameter(NdArrayParameter(''), 'arrays_out')]
 
-    def execute(self, arrays_in, expression, **kwargs):
-        return (
-            self.evaluate_expression(expression, dict(self.get_context(a, expression, kwargs), **kwargs, **{'i': i}))
+    def execute(self, arrays_in, expression, generator=False, **kwargs):
+        result = (
+            self.evaluate_expression(expression, dict(self.get_context(a, expression, kwargs), i=i, **kwargs))
             for i, a in enumerate(arrays_in)
         )
+
+        return result if generator else list(result)
 
 
 class ReduceByExpression(ExpressionMixin, Task):

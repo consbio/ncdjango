@@ -266,6 +266,20 @@ class FloatParameter(NumberParameter):
         return float(super(FloatParameter, self).clean(value))
 
 
+class BooleanParameter(Parameter):
+    """Accepts a boolean value. Will cast other objects to bool. Will treat a string, "false" as False."""
+
+    id = 'bool'
+
+    def clean(self, value):
+        """Cleans and returns the given value, or raises a ParameterNotValidError exception"""
+
+        if isinstance(value, six.string_types) and value.lower() == 'false':
+            return False
+
+        return bool(value)
+
+
 class DictParameter(Parameter):
     """Accepts a dictionary"""
 
