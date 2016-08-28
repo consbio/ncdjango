@@ -445,14 +445,31 @@ class Parser(object):
 
     def fn_int(self, value):
         """
-        Return the value cast to an int.
+        Return the value cast to an int. If the value is an array, it will be cast to the smallest possible int type
+        to fit the values, unless the type is already int, in which case it will be left as-is.
 
         :param value: The number.
         :return: The number as an int.
         """
 
         if is_ndarray(value) or isinstance(value, (list, tuple)):
-            return self._to_ndarray(value).astype(int)
+            arr = self._to_ndarray(value)
+            if arr.dtype.kind == 'i':
+                return arr
+
+            min_value = arr.min()
+            max_value = arr.max()
+
+            dtypes = ('int8', 'int16', 'int32', 'int64')
+            if min_value < 0:
+                dtypes = ('uint8', 'uint16', 'uint32', 'uint64')
+
+            for dtype in dtypes:
+                info = numpy.iinfo(dtype)
+                if info.min <= min_value and info.max >= max_value:
+                    return arr.astype(dtype)
+
+            raise RuntimeError('Could not cast array to int')
         else:
             return int(value)
 
@@ -469,16 +486,58 @@ class Parser(object):
         else:
             return int(value)
 
+    def fn_int16(self, value):
+        """
+        Return the value cast to an 16-bit signed integer (numpy array) or a Python int (single value)
+
+        :param value: The number or array
+        :return: The number or array as int/int8
+        """
+
+        if is_ndarray(value) or isinstance(value, (list, tuple)):
+            return self._to_ndarray(value).astype(numpy.int16)
+        else:
+            return int(value)
+
+    def fn_int32(self, value):
+        """
+        Return the value cast to an 32-bit signed integer (numpy array) or a Python int (single value)
+
+        :param value: The number or array
+        :return: The number or array as int/int8
+        """
+
+        if is_ndarray(value) or isinstance(value, (list, tuple)):
+            return self._to_ndarray(value).astype(numpy.int32)
+        else:
+            return int(value)
+
     def fn_float(self, value):
         """
-        Return the value cast to a float.
+        Return the value cast to a float. If the value is an array, it will be cast to the smallest possible float type
+        to fit the values, unless the type is already float, in which case it will be left as-is.
 
         :param value: The number.
         :return: The number as a float.
         """
 
         if is_ndarray(value) or isinstance(value, (list, tuple)):
-            return self._to_ndarray(value).astype(float)
+            arr = self._to_ndarray(value)
+
+            if arr.dtype.kind == 'f':
+                return arr
+
+            min_value = arr.min()
+            max_value = arr.max()
+
+            dtypes = ('float16', 'float32', 'float64')
+
+            for dtype in dtypes:
+                info = numpy.finfo(dtype)
+                if info.min < min_value and info.max > max_value:
+                    return arr.astype(dtype)
+
+            raise RuntimeError('Could not cast array to float')
         else:
             return float(value)
 
