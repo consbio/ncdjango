@@ -26,7 +26,7 @@ class Lexer(object):
 
     functions = {
         'abs', 'get_mask', 'min', 'mask', 'max', 'median', 'mean', 'std', 'var', 'floor', 'ceil', 'int', 'int8',
-        'float'
+        'int16', 'int32', 'int64', 'float', 'float16', 'float32', 'float64'
     }
 
     tokens = [
@@ -445,31 +445,14 @@ class Parser(object):
 
     def fn_int(self, value):
         """
-        Return the value cast to an int. If the value is an array, it will be cast to the smallest possible int type
-        to fit the values, unless the type is already int, in which case it will be left as-is.
+        Return the value cast to an int.
 
         :param value: The number.
         :return: The number as an int.
         """
 
         if is_ndarray(value) or isinstance(value, (list, tuple)):
-            arr = self._to_ndarray(value)
-            if arr.dtype.kind == 'i':
-                return arr
-
-            min_value = arr.min()
-            max_value = arr.max()
-
-            dtypes = ('int8', 'int16', 'int32', 'int64')
-            if min_value < 0:
-                dtypes = ('uint8', 'uint16', 'uint32', 'uint64')
-
-            for dtype in dtypes:
-                info = numpy.iinfo(dtype)
-                if info.min <= min_value and info.max >= max_value:
-                    return arr.astype(dtype)
-
-            raise RuntimeError('Could not cast array to int')
+            return self._to_ndarray(value).astype('int')
         else:
             return int(value)
 
@@ -512,32 +495,68 @@ class Parser(object):
         else:
             return int(value)
 
+    def fn_int32(self, value):
+        """
+        Return the value cast to an 64-bit signed integer (numpy array) or a Python int (single value)
+
+        :param value: The number or array
+        :return: The number or array as int/int8
+        """
+
+        if is_ndarray(value) or isinstance(value, (list, tuple)):
+            return self._to_ndarray(value).astype(numpy.int64)
+        else:
+            return int(value)
+
     def fn_float(self, value):
         """
-        Return the value cast to a float. If the value is an array, it will be cast to the smallest possible float type
-        to fit the values, unless the type is already float, in which case it will be left as-is.
+        Return the value cast to a float.
 
         :param value: The number.
         :return: The number as a float.
         """
 
         if is_ndarray(value) or isinstance(value, (list, tuple)):
-            arr = self._to_ndarray(value)
+            return self._to_ndarray(value).astype('float')
+        else:
+            return float(value)
 
-            if arr.dtype.kind == 'f':
-                return arr
+    def fn_float16(self, value):
+        """
+        Return the value cast to a 16-bit float (numpy array) or a Python float (single value).
 
-            min_value = arr.min()
-            max_value = arr.max()
+        :param value: The number.
+        :return: The number as a float.
+        """
 
-            dtypes = ('float16', 'float32', 'float64')
+        if is_ndarray(value) or isinstance(value, (list, tuple)):
+            return self._to_ndarray(value).astype('float16')
+        else:
+            return float(value)
 
-            for dtype in dtypes:
-                info = numpy.finfo(dtype)
-                if info.min < min_value and info.max > max_value:
-                    return arr.astype(dtype)
+    def fn_float32(self, value):
+        """
+        Return the value cast to a 32-bit float (numpy array) or a Python float (single value).
 
-            raise RuntimeError('Could not cast array to float')
+        :param value: The number.
+        :return: The number as a float.
+        """
+
+        if is_ndarray(value) or isinstance(value, (list, tuple)):
+            return self._to_ndarray(value).astype('float32')
+        else:
+            return float(value)
+
+    def fn_float64(self, value):
+        """
+        Return the value cast to a 64-bit float (numpy array) or a Python float (single value).
+
+        :param value: The number.
+        :return: The number as a float.
+        """
+
+        if is_ndarray(value) or isinstance(value, (list, tuple)):
+            return self._to_ndarray(value).astype('float64')
         else:
             return float(value)
 
