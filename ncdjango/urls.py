@@ -36,5 +36,6 @@ urlpatterns += patterns('',
     url(r'^api/admin/upload-by-url/$', TemporaryFileUploadUrlView.as_view(), name='nc_admin_upload_by_url'),
     url(r'^api/admin/upload/$', TemporaryFileUploadFormView.as_view(), name='nc_admin_upload'),
     url(r'^api/admin/download/(?P<uuid>[0-9\w\-]+)/$', TemporaryFileDownloadView.as_view(), name='nc_admin_download'),
-    url(r'^api/', include(api.urls))
+    url(r'^api/', include(api.urls)),
+    url(r'^geoprocessing/', include('ncdjango.geoprocessing.urls'))
 )

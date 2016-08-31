@@ -254,10 +254,10 @@ class GetImageViewBase(NetCdfDatasetMixin, ServiceView):
                 )
 
                 grid_bounds = [
-                    int(math.floor(float(native_extent.xmin-config.variable.full_extent.xmin) / cell_size[0])),
-                    int(math.floor(float(native_extent.ymin-config.variable.full_extent.ymin) / cell_size[1])),
-                    int(math.ceil(float(native_extent.xmax-config.variable.full_extent.xmin) / cell_size[0])),
-                    int(math.ceil(float(native_extent.ymax-config.variable.full_extent.ymin) / cell_size[1]))
+                    int(math.floor(float(native_extent.xmin-config.variable.full_extent.xmin) / cell_size[0])) - 1,
+                    int(math.floor(float(native_extent.ymin-config.variable.full_extent.ymin) / cell_size[1])) - 1,
+                    int(math.ceil(float(native_extent.xmax-config.variable.full_extent.xmin) / cell_size[0])) + 1,
+                    int(math.ceil(float(native_extent.ymax-config.variable.full_extent.ymin) / cell_size[1])) + 1
                 ]
 
                 grid_bounds = [

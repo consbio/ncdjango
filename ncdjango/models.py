@@ -2,6 +2,8 @@ import calendar
 from datetime import timedelta
 import logging
 import uuid
+
+from celery.result import AsyncResult
 from django.conf import settings
 from django.core.exceptions import ValidationError
 from django.db import models
@@ -13,6 +15,7 @@ logger = logging.getLogger(__name__)
 
 SERVICE_DATA_ROOT = getattr(settings, 'NC_SERVICE_DATA_ROOT', '/var/ncdjango/services/')
 TEMPORARY_FILE_LOCATION = getattr(settings, 'NC_TEMPORARY_FILE_LOCATION', '/tmp')
+USER_MODEL = getattr(settings, 'AUTH_USER_MODEL', 'auth.User')
 
 
 class Service(models.Model):
@@ -39,7 +42,7 @@ class Service(models.Model):
 
     name = models.CharField(max_length=256, db_index=True, unique=True)
     description = models.TextField(null=True)
-    data_path = models.FilePathField(SERVICE_DATA_ROOT, recursive=True)
+    data_path = models.FilePathField(path=SERVICE_DATA_ROOT, recursive=True, max_length=1024)
     projection = models.TextField()  # PROJ4 definition
     full_extent = BoundingBoxField()
     initial_extent = BoundingBoxField()
@@ -80,6 +83,9 @@ class Variable(models.Model):
     time_start = models.DateTimeField(null=True)
     time_end = models.DateTimeField(null=True)
     time_steps = models.PositiveIntegerField(null=True)
+
+    class Meta:
+        unique_together = ('variable', 'service')
 
     @property
     @auto_memoize
@@ -174,3 +180,25 @@ def temporary_file_deleted(sender, instance, **kwargs):
         except IOError:
             logger.exception("Error deleting temporary file: %s" % instance.file.name)
 post_delete.connect(temporary_file_deleted, sender=TemporaryFile)
+
+
+class ProcessingJob(models.Model):
+    uuid = models.CharField(max_length=36, default=uuid.uuid4, db_index=True)
+    job = models.CharField(max_length=100)
+    user = models.ForeignKey(USER_MODEL, null=True, on_delete=models.SET_NULL)
+    user_ip = models.CharField(max_length=32)
+    created = models.DateTimeField(auto_now_add=True)
+    celery_id = models.CharField(max_length=100)
+    inputs = models.TextField(null=False, default="{}")
+    outputs = models.TextField(null=False, default="{}")
+
+    @property
+    def status(self):
+        return AsyncResult(self.celery_id).status.lower()
+
+
+class ProcessingResultService(models.Model):
+    job = models.ForeignKey(ProcessingJob)
+    service = models.ForeignKey(Service)
+    is_temporary = models.BooleanField(default=True)
+    created = models.DateTimeField(auto_now_add=True)

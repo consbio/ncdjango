@@ -1,0 +1,49 @@
+{
+  "meta": {
+    "name": "Map Reduce Workflow",
+    "description": "This is a simple workflow designed to test the use of map and reduce tasks."
+  },
+  "inputs": [
+    {
+      "name": "arrays_in",
+      "type": "list",
+      "args": [[["array", [[""], {}]]], {}]
+    }
+  ],
+  "workflow": [
+    {
+      "id": "normalize_inputs",
+      "task": "raster:map_by_expression",
+      "inputs": {
+        "arrays_in": {
+          "source": "input",
+          "input": "arrays_in"
+        },
+        "expression": {
+          "source": "literal",
+          "input": "x / max(x)"
+        }
+      }
+    },
+    {
+      "id": "sum_arrays",
+      "task": "raster:reduce_by_expression",
+      "inputs": {
+        "arrays_in": {
+          "source": "dependency",
+          "node": ["normalize_inputs", "arrays_out"]
+        },
+        "expression": {
+          "source": "literal",
+          "input": "x + y"
+        }
+      }
+    }
+  ],
+  "outputs": [
+    {
+      "name": "array_out",
+      "node": ["sum_arrays", "array_out"]
+    }
+  ]
+}
