@@ -45,8 +45,15 @@ class ProcessingJobSerializer(serializers.ModelSerializer):
         result = run_job.delay(validated_data['job'], validated_data['inputs'])
         request = self.context['request']
 
+        # Get real IP address if request has been forwarded
+        forwarded_for = request.META.get('HTTP_X_FORWARDED_FOR')
+        if forwarded_for:
+            ip_address = forwarded_for.split(',', 1)[0].strip()
+        else:
+            ip_address = request.META.get('REMOTE_ADDR')
+
         return ProcessingJob.objects.create(
             job=validated_data['job'], celery_id=result.id, status='pending',
-            inputs=json.dumps(validated_data['inputs']), user_ip=request.META.get('REMOTE_ADDR'),
+            inputs=json.dumps(validated_data['inputs']), user_ip=ip_address,
             user=request.user if request.user.is_authenticated() else None
         )
