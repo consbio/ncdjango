@@ -4,3 +4,5 @@ __pycache__
 ncdjango/geoprocessing/parsetab.py
 ncdjango/geoprocessing/parser.out
 docs/_*
+build/
+dist/
