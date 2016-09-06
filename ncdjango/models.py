@@ -19,7 +19,10 @@ USER_MODEL = getattr(settings, 'AUTH_USER_MODEL', 'auth.User')
 
 
 class Service(models.Model):
-    """Map service"""
+    """
+    A service maps to a single NetCDF dataset. Services contain general metadata (name, description), and information
+    about the data extend, projection, and support for time.
+    """
 
     CALENDAR_CHOICES = (
         ('standard', 'Standard Gregorian'),
@@ -66,7 +69,10 @@ class Service(models.Model):
 
 
 class Variable(models.Model):
-    """A variable/layer in a map service. Each service may have one or more variables."""
+    """
+    A variable in a map service. This is usually presented as a layer in a web interface. Each service may have one
+    or more variables. Each variable maps to a variable in the NetCDF dataset.
+    """
 
     service = models.ForeignKey(Service)
     index = models.PositiveIntegerField()
@@ -90,7 +96,7 @@ class Variable(models.Model):
     @property
     @auto_memoize
     def time_stops(self):
-        """Valid time steps for this service as a list of datetime objects."""
+        """ Valid time steps for this service as a list of datetime objects. """
 
         if not self.supports_time:
             return []
@@ -183,6 +189,8 @@ post_delete.connect(temporary_file_deleted, sender=TemporaryFile)
 
 
 class ProcessingJob(models.Model):
+    """ An active, completed, or failed geoprocessing job. """
+
     uuid = models.CharField(max_length=36, default=uuid.uuid4, db_index=True)
     job = models.CharField(max_length=100)
     user = models.ForeignKey(USER_MODEL, null=True, on_delete=models.SET_NULL)
@@ -194,10 +202,17 @@ class ProcessingJob(models.Model):
 
     @property
     def status(self):
+        """ The status of the celery task for this job. """
+
         return AsyncResult(self.celery_id).status.lower()
 
 
 class ProcessingResultService(models.Model):
+    """
+    A result service is created from the raster output of a geoprocessing job. This model tracks which services are
+    automatically generated from job results.
+    """
+
     job = models.ForeignKey(ProcessingJob)
     service = models.ForeignKey(Service)
     is_temporary = models.BooleanField(default=True)

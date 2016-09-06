@@ -1,11 +1,9 @@
-import copy
 import json
-from rest_framework import serializers
 
 from ncdjango.geoprocessing.celery_tasks import run_job
-from ncdjango.geoprocessing.params import ParameterNotValidError
-from ncdjango.geoprocessing.utils import REGISTERED_JOBS, get_task_instance, process_web_inputs
+from ncdjango.geoprocessing.utils import REGISTERED_JOBS, get_task_instance
 from ncdjango.models import ProcessingJob
+from rest_framework import serializers
 
 
 class ProcessingJobSerializer(serializers.ModelSerializer):

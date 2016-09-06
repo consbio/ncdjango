@@ -3,3 +3,4 @@ ncdjango.egg-info/
 __pycache__
 ncdjango/geoprocessing/parsetab.py
 ncdjango/geoprocessing/parser.out
+docs/_*
