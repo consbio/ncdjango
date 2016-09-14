@@ -56,7 +56,7 @@ class Raster(numpy.ma.MaskedArray):
                 if i == self.x_dim:
                     xmin += cell_size[0] * (item.start or 0)
 
-                    end = item.stop or self.shape[self.x_dim]
+                    end = min(item.stop or self.shape[self.x_dim], self.shape[self.x_dim])
                     if end < 0:
                         end = self.shape[self.x_dim] + end + 1
 
@@ -64,7 +64,7 @@ class Raster(numpy.ma.MaskedArray):
 
                 if i == self.y_dim:
                     start = item.start or 0
-                    end = item.stop or self.shape[self.y_dim]
+                    end = min(item.stop or self.shape[self.y_dim], self.shape[self.y_dim])
                     if end < 0:
                         end = self.shape[self.y_dim] + end
                     end = self.shape[self.y_dim] - end
@@ -126,6 +126,16 @@ class Raster(numpy.ma.MaskedArray):
 
     def __rmul__(self, other):
         obj = super(Raster, self).__rmul__(other)
+        Raster.__array_finalize__(obj, self)
+        return obj
+
+    def __div__(self, other):
+        obj = super(Raster, self).__div__(other)
+        Raster.__array_finalize__(obj, self)
+        return obj
+
+    def __rdiv__(self, other):
+        obj = super(Raster, self).__rdiv__(other)
         Raster.__array_finalize__(obj, self)
         return obj
 
