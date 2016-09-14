@@ -1,0 +1,44 @@
+language: python
+
+python:
+  - "3.5"
+  - "2.7"
+
+env:
+  global:
+    - GDALINST=$HOME/gdalinstall
+    - GDALBUILD=$HOME/gdalbuild
+    - GDALVERSION="2.0.2"
+
+cache:
+  directories:
+    - $GDALINST
+    - ~/.cache/pip
+
+addons:
+  apt:
+    packages:
+      - gdal-bin
+      - libproj-dev
+      - libhdf5-serial-dev
+      - libpng-dev
+      - libgdal-dev
+      - libatlas-dev
+      - libatlas-base-dev
+      - gfortran
+      - netcdf-bin
+      - libnetcdf-dev
+
+before_install:
+  - . ./scripts/travis_gdal_install.sh
+  - export PATH=$GDALINST/gdal-$GDALVERSION/bin:$PATH
+  - export LD_LIBRARY_PATH=$GDALINST/gdal-$GDALVERSION/lib:$LD_LIBRARY_PATH
+  - "pip install GDAL==2.0.1"
+  - "pip install rasterio"
+  - "pip install git+https://github.com/consbio/clover.git"
+
+install:
+  - "python setup.py install"
+
+script:
+  - "py.test ."
