@@ -4,6 +4,8 @@ import mimetypes
 import os
 import shutil
 import tempfile
+
+from numpy.ma.core import is_masked
 from six.moves.urllib.error import URLError
 from six.moves.urllib.parse import unquote
 from PIL import Image
@@ -364,7 +366,8 @@ class IdentifyViewBase(NetCdfDatasetMixin, ServiceView):
                 )
 
                 if len(variable_data):
-                    data[variable] = float(variable_data[0][0])
+                    value = variable_data[0][0]
+                    data[variable] = None if is_masked(value) else float(value)
 
             data, content_type = self.serialize_data(data)
             return self.create_response(request, data, content_type=content_type)
