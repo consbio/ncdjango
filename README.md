@@ -1,4 +1,4 @@
-# ncdjango 0.4.2
+# ncdjango 0.4.3
 Ncdjango turns [Django](https://www.djangoproject.com/) projects into map servers backed by
 [NetCDF](http://www.unidata.ucar.edu/software/netcdf/docs/faq.html#whatisit) datasets. It can be added Django project
 to provide various web interfaces to NetCDF data and geoprocessing tools written in Python which operate on NetCDF data.
