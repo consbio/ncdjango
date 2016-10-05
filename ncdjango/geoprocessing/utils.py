@@ -11,12 +11,13 @@ from django.conf import settings
 from django.core.exceptions import ImproperlyConfigured
 from django.db import transaction
 from netCDF4 import Dataset
-
 from numpy.ma.core import is_masked
 from rasterio.dtypes import is_ndarray
+from shapely.geometry import shape
 
+from ncdjango.geoprocessing import params
 from ncdjango.geoprocessing.data import is_raster
-from ncdjango.geoprocessing.params import RegisteredDatasetParameter, RasterParameter, NdArrayParameter, ListParameter
+from ncdjango.geoprocessing.params import ParameterNotValidError
 from ncdjango.geoprocessing.workflow import Workflow
 from ncdjango.models import SERVICE_DATA_ROOT, Service, Variable, ProcessingResultService
 
@@ -59,10 +60,26 @@ def get_task_instance(job_name):
 def process_web_inputs(task, inputs):
     for param in task.inputs:
         if param.name in inputs:
-            if isinstance(param, (RasterParameter, NdArrayParameter)):
-                inputs[param.name] = RegisteredDatasetParameter(param.name).clean(inputs[param.name])
-            elif isinstance(param, ListParameter) and isinstance(param.param_type, (RasterParameter, NdArrayParameter)):
-                inputs[param.name] = [RegisteredDatasetParameter(param.name).clean(x) for x in inputs[param.name]]
+            if isinstance(param, (params.RasterParameter, params.NdArrayParameter)):
+                inputs[param.name] = params.RegisteredDatasetParameter(param.name).clean(inputs[param.name])
+
+            elif isinstance(param, params.FeatureParameter):
+                try:
+                    inputs[param.name] = shape(inputs[param.name])
+                except (ValueError, AttributeError, KeyError):
+                    raise ParameterNotValidError
+
+            elif isinstance(param, params.ListParameter):
+                if isinstance(param.param_type, (params.RasterParameter, params.NdArrayParameter)):
+                    inputs[param.name] = [
+                        params.RegisteredDatasetParameter(param.name).clean(x) for x in inputs[param.name]
+                    ]
+
+                elif isinstance(param.param_type, params.FeatureParameter):
+                    try:
+                        inputs[param.name] = [shape(x) for x in inputs[param.name]]
+                    except (ValueError, AttributeError, KeyError):
+                        raise ParameterNotValidError
 
     return task.validate_inputs(inputs)
 
