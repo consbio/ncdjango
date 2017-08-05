@@ -1,15 +1,18 @@
+import datetime
 import numbers
 from types import GeneratorType
 
-from django.core.exceptions import ObjectDoesNotExist
-from fiona.collection import Collection
 import netCDF4
 import numpy
-from shapely.geometry.base import BaseGeometry
+import pytz
 import six
+from django.core.exceptions import ObjectDoesNotExist
+from fiona.collection import Collection
+from shapely.geometry.base import BaseGeometry
 
 from ncdjango.geoprocessing.data import Raster
 from ncdjango.models import Service
+from ncdjango.utils import best_fit
 from ncdjango.views import NetCdfDatasetMixin
 
 
@@ -402,6 +405,16 @@ class RegisteredDatasetParameter(NetCdfDatasetMixin, Parameter):
             raise ParameterNotValidError
 
         if source == 'service':
+            if '@' in value:
+                value, timestamp = value.split('@', 1)
+
+                try:
+                    service_time = datetime.datetime.utcfromtimestamp(int(timestamp)).replace(tzinfo=pytz.utc)
+                except ValueError:
+                    raise ParameterNotValidError
+            else:
+                service_time = None
+
             if ':' in value:
                 service_name, variable_name = value.split(':', 1)
             else:
@@ -419,7 +432,12 @@ class RegisteredDatasetParameter(NetCdfDatasetMixin, Parameter):
                 except ObjectDoesNotExist:
                     raise ParameterNotValidError("Variable '{}' not found".format(variable_name))
 
-                data = self.get_grid_for_variable(variable)
+                if service_time is not None:
+                    time_index = best_fit(variable.time_stops, service_time)
+                else:
+                    time_index = None
+                print(time_index)
+                data = self.get_grid_for_variable(variable, time_index=time_index)
                 return Raster(data, variable.full_extent, 1, 0, self.is_y_increasing(variable))
             else:
                 return self.dataset
