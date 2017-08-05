@@ -195,3 +195,32 @@ A jQuery Example
             }
         });
     }
+
+
+Loading Service Data with `RasterParameter`
+-------------------------------------------
+
+For tasks with a ``RasterParameter`` or ``NdArrayParameter`` input, the client can pass a reference to a published
+service which will be automatically loaded into memory as a ``Raster`` object and passed to the task as an input. To
+do this, the client should pass, as the input, a string with the following format:
+``service://<service name>:<variable name>@<timestamp (optional)>``. The timestamp is a Unix-style timestamp
+representing the seconds since January 1, 1970.
+
+.. note::
+
+    The Unix-style timestamp is represented in seconds, unlike the Java/JavaScript timestamp, which is represented in
+    milliseconds. Therefore timestamps from Java or JavaScript need to be divided by 1000.
+
+In this example, a job is created where an input called ``data`` accepts a raster parameter, which will be filled
+with data from the ``tmax`` variable of a service called ``climate-service`` with the timestamp ``1501895290``.
+
+.. code-block:: text
+    POST GET /geoprocessing/rest/jobs/
+
+.. code-block:: json
+
+    {
+        "job": "some_job",
+        "inputs": "{\"data\": \"service://climate-service:tmax@1501895290\"}"
+    }
+
