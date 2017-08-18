@@ -436,7 +436,7 @@ class RegisteredDatasetParameter(NetCdfDatasetMixin, Parameter):
                     time_index = best_fit(variable.time_stops, service_time)
                 else:
                     time_index = None
-                print(time_index)
+                
                 data = self.get_grid_for_variable(variable, time_index=time_index)
                 return Raster(data, variable.full_extent, 1, 0, self.is_y_increasing(variable))
             else:
