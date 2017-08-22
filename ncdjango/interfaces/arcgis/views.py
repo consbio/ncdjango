@@ -14,9 +14,9 @@ import six
 from ncdjango.config import RenderConfiguration, IdentifyConfiguration, LegendConfiguration, ImageConfiguration
 from ncdjango.exceptions import ConfigurationError
 from ncdjango.interfaces.arcgis.forms import GetImageForm, IdentifyForm
-from ncdjango.interfaces.arcgis.utils import date_to_timestamp, extent_to_envelope
+from ncdjango.interfaces.arcgis.utils import extent_to_envelope
 from ncdjango.models import Service, Variable
-from ncdjango.utils import proj4_to_epsg
+from ncdjango.utils import proj4_to_epsg, date_to_timestamp
 from ncdjango.views import GetImageViewBase, IdentifyViewBase, LegendViewBase, FORCE_WEBP
 
 ALLOW_BEST_FIT_TIME_INDEX = getattr(settings, 'NC_ALLOW_BEST_FIT_TIME_INDEX', True)

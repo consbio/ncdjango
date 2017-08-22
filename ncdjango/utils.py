@@ -1,9 +1,11 @@
 from bisect import bisect_left
+from datetime import datetime, timedelta
 from functools import wraps, partial
 import os
 import re
 import osgeo
 import pyproj
+from django.utils.timezone import utc
 from shapely.ops import transform
 
 EPSG_RE = re.compile(r'\+init=epsg:([0-9]+)')
@@ -97,3 +99,11 @@ def project_geometry(geometry, source, target):
     )
 
     return transform(project, geometry)
+
+
+def timestamp_to_date(timestamp):
+    return datetime.utcfromtimestamp(0).replace(tzinfo=utc) + timedelta(seconds=int(timestamp / 1000))
+
+
+def date_to_timestamp(date_obj):
+    return int((date_obj - datetime.utcfromtimestamp(0).replace(tzinfo=utc)).total_seconds() * 1000)
