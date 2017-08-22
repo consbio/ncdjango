@@ -12,7 +12,7 @@ from shapely.geometry.base import BaseGeometry
 
 from ncdjango.geoprocessing.data import Raster
 from ncdjango.models import Service
-from ncdjango.utils import best_fit
+from ncdjango.utils import best_fit, timestamp_to_date
 from ncdjango.views import NetCdfDatasetMixin
 
 
@@ -409,7 +409,7 @@ class RegisteredDatasetParameter(NetCdfDatasetMixin, Parameter):
                 value, timestamp = value.split('@', 1)
 
                 try:
-                    service_time = datetime.datetime.utcfromtimestamp(int(timestamp)).replace(tzinfo=pytz.utc)
+                    service_time = timestamp_to_date(int(timestamp))
                 except ValueError:
                     raise ParameterNotValidError
             else:
@@ -436,7 +436,7 @@ class RegisteredDatasetParameter(NetCdfDatasetMixin, Parameter):
                     time_index = best_fit(variable.time_stops, service_time)
                 else:
                     time_index = None
-                
+
                 data = self.get_grid_for_variable(variable, time_index=time_index)
                 return Raster(data, variable.full_extent, 1, 0, self.is_y_increasing(variable))
             else:

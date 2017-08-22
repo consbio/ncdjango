@@ -9,9 +9,8 @@ from shapely.geometry.base import BaseGeometry
 from shapely.geometry.multilinestring import MultiLineString
 from shapely.geometry.point import Point
 from shapely.geometry.polygon import LinearRing, Polygon
-from ncdjango.interfaces.arcgis.utils import timestamp_to_date, date_to_timestamp
 from ncdjango.interfaces.arcgis.wkid import wkid_to_proj
-from ncdjango.utils import proj4_to_epsg
+from ncdjango.utils import proj4_to_epsg, timestamp_to_date, date_to_timestamp
 
 
 class BoundingBoxField(forms.Field):
