@@ -144,7 +144,7 @@ class TimeField(forms.Field):
 
         try:
             if ',' in value:
-                return tuple([timestamp_to_date(int(x)) for x in value.split(',')])
+                return tuple([timestamp_to_date(int(x)//1000) for x in value.split(',')])
             else:
                 return datetime(int(value))
         except ValueError:
@@ -155,9 +155,9 @@ class TimeField(forms.Field):
             return value
 
         if isinstance(value, (tuple, list)):
-            return ",".join([str(date_to_timestamp(x)) for x in value])
+            return ",".join([str(date_to_timestamp(x)*1000) for x in value])
         else:
-            return str(date_to_timestamp(value))
+            return str(date_to_timestamp(value)*1000)
 
 
 class DynamicLayersField(forms.Field):

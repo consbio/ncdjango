@@ -102,8 +102,8 @@ def project_geometry(geometry, source, target):
 
 
 def timestamp_to_date(timestamp):
-    return datetime.utcfromtimestamp(0).replace(tzinfo=utc) + timedelta(seconds=int(timestamp / 1000))
+    return datetime.utcfromtimestamp(0).replace(tzinfo=utc) + timedelta(seconds=timestamp)
 
 
 def date_to_timestamp(date_obj):
-    return int((date_obj - datetime.utcfromtimestamp(0).replace(tzinfo=utc)).total_seconds() * 1000)
+    return int((date_obj - datetime.utcfromtimestamp(0).replace(tzinfo=utc)).total_seconds())
