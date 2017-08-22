@@ -97,7 +97,9 @@ class MapServiceDetailView(DetailView):
 
         if self.object.supports_time:
             data['timeInfo'] = {
-                'timeExtent': [date_to_timestamp(self.object.time_start), date_to_timestamp(self.object.time_end)],
+                'timeExtent': [
+                    date_to_timestamp(self.object.time_start)*1000, date_to_timestamp(self.object.time_end)*1000
+                ],
                 'timeRelation': 'esriTimeRelationOverlaps',
                 'defaultTimeInterval': self.object.time_interval,
                 'defaultTimeIntervalUnits': TIME_UNITS_MAP.get(self.object.time_interval_units),
@@ -173,7 +175,7 @@ class LayerDetailView(DetailView):
 
         if variable.supports_time:
             data['timeInfo'] = {
-                'timeExtent': [date_to_timestamp(variable.time_start), date_to_timestamp(variable.time_end)],
+                'timeExtent': [date_to_timestamp(variable.time_start)*1000, date_to_timestamp(variable.time_end)*1000],
                 'timeInterval': variable.service.time_interval,
                 'timeIntervalUnits': TIME_UNITS_MAP.get(variable.service.time_interval_units),
                 'exportOptions': {
