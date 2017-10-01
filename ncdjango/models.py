@@ -14,7 +14,7 @@ from ncdjango.utils import auto_memoize
 logger = logging.getLogger(__name__)
 
 SERVICE_DATA_ROOT = getattr(settings, 'NC_SERVICE_DATA_ROOT', '/var/ncdjango/services/')
-TEMPORARY_FILE_LOCATION = getattr(settings, 'NC_TEMPORARY_FILE_LOCATION', '/tmp')
+TEMPORARY_FILE_LOCATION = getattr(settings, 'NC_TEMPORARY_FILE_LOCATION', 'temp')
 USER_MODEL = getattr(settings, 'AUTH_USER_MODEL', 'auth.User')
 
 

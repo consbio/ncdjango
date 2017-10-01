@@ -7,13 +7,15 @@ from clover.render.renderers.unique import UniqueValuesRenderer
 from clover.utilities.color import Color
 from django.core.exceptions import ValidationError
 from django.db import models
-from django.utils.six import with_metaclass
 from django.utils.translation import ugettext_lazy as _
 import pyproj
 
 
-class BoundingBoxField(with_metaclass(models.SubfieldBase, models.TextField)):
+class BoundingBoxField(models.TextField):
     description = _('Bounding box with associated projection information')
+
+    def from_db_value(self, value, expression, connection, context):
+        return self.to_python(value)
 
     def to_python(self, value):
         if not value or isinstance(value, BBox):
@@ -42,8 +44,11 @@ class BoundingBoxField(with_metaclass(models.SubfieldBase, models.TextField)):
         })
 
 
-class RasterRendererField(with_metaclass(models.SubfieldBase, models.TextField)):
+class RasterRendererField(models.TextField):
     description = _('A class to generate images from raster data')
+
+    def from_db_value(self, value, expression, connection, context):
+        return self.to_python(value)
 
     def to_python(self, value):
         if not value or isinstance(value, RasterRenderer):

@@ -5,7 +5,7 @@ Requirements
 ------------
 
 * Python 2.7, Python 3.5+
-* Django 1.7, 1.8
+* Django 1.8 - 1.11
 * ``clover`` 0.2.0 (https://github.com/consbio/clover)
 * ``numpy`` (http://www.numpy.org)
 * ``django-tastypie`` 0.13.x (https://django-tastypie.readthedocs.io)
@@ -25,12 +25,12 @@ Installation
 
 Once the dependencies are installed, you can install ncdjango with::
 
-   $ pip install git+https://github.com/consbio/ncdjango.git
+   $ pip install ncdjango
 
 .. note::
-   ncdjango should automatically install required dependencies, but certain dependencies such as clover (which depends
-   on rasterio, which depends on GDAL) may not automatically install well, so it's recommended to install the
-   dependencies separately.
+   The `clover` dependency is not the same as the `pip` package of the same name. `clover` must be installed from
+   https://github.com/consbio/clover. The correct package should be installed by `ncdjango`, but in case of problems,
+   it's good to check that you have the correct one.
 
 Setup
 -----

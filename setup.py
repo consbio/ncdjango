@@ -11,12 +11,12 @@ setup(
         'ncdjango.interfaces.data'
     ],
     install_requires=[
-        'six', 'requests', 'Django>=1.7.0,<1.9.0', 'Pillow>=2.9.0', 'Shapely>=1.3.2', 'django-tastypie>=0.11.1',
+        'six', 'requests', 'Django>=1.8.0,<1.12.0', 'Pillow>=2.9.0', 'Shapely>=1.3.2', 'django-tastypie>=0.14.0',
         'netCDF4>=1.1.6', 'numpy>=1.8.1', 'pyproj>=1.9.4', 'fiona', 'rasterio>=0.28.0', 'clover', 'ply>=3.8',
         'celery>=3.1.19', 'djangorestframework'
     ],
     dependency_links=[
-        'git+https://github.com/consbio/clover.git'
+        'git+https://github.com/consbio/clover.git#egg=clover'
     ],
     url='https://github.com/consbio/ncdjango',
     license='BSD',

@@ -1,10 +1,8 @@
-import datetime
 import numbers
 from types import GeneratorType
 
 import netCDF4
 import numpy
-import pytz
 import six
 from django.core.exceptions import ObjectDoesNotExist
 from fiona.collection import Collection
