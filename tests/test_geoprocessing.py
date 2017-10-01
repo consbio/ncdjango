@@ -1,6 +1,3 @@
-from django.conf import settings
-settings.configure()
-
 import json
 import os
 

@@ -2,13 +2,14 @@ language: python
 
 python:
   - "3.5"
+  - "3.6"
   - "2.7"
 
 env:
   global:
-    - GDALINST=$HOME/gdalinstall
-    - GDALBUILD=$HOME/gdalbuild
-    - GDALVERSION="2.0.2"
+    - PYTHONPATH=$PYTHONPATH:$TRAVIS_BUILD_DIR:$TRAVIS_BUILD_DIR/source
+    - CPLUS_INCLUDE_PATH=/usr/include/gdal
+    - C_INCLUDE_PATH=/usr/include/gdal
 
 cache:
   directories:
@@ -30,13 +31,10 @@ addons:
       - libnetcdf-dev
 
 before_install:
-  - . ./scripts/travis_gdal_install.sh
-  - export PATH=$GDALINST/gdal-$GDALVERSION/bin:$PATH
-  - export LD_LIBRARY_PATH=$GDALINST/gdal-$GDALVERSION/lib:$LD_LIBRARY_PATH
-  - pip install "setuptools>=18.0"
-  - "pip install GDAL==2.0.1"
+  - "pip install GDAL==1.10"
   - "pip install rasterio"
   - "pip install git+https://github.com/consbio/clover.git"
+  - "pip install --upgrade setuptools"
 
 install:
   - "python setup.py install"
