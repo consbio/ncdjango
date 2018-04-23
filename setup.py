@@ -4,7 +4,7 @@ setup(
     name='ncdjango',
     description='A map server for NetCDF data',
     keywords='netcdf,django,map server',
-    version='0.5.0',
+    version='0.5.1',
     packages=[
         'ncdjango', 'ncdjango.geoprocessing', 'ncdjango.geoprocessing.tasks', 'ncdjango.migrations',
         'ncdjango.interfaces', 'ncdjango.interfaces.arcgis', 'ncdjango.interfaces.arcgis_extended',
