@@ -3,10 +3,10 @@ from importlib import import_module
 
 import numpy
 import six
-from clover.netcdf.crs import set_crs
-from clover.netcdf.variable import SpatialCoordinateVariables
-from clover.render.renderers.stretched import StretchedRenderer
-from clover.utilities.color import Color
+from trefoil.netcdf.crs import set_crs
+from trefoil.netcdf.variable import SpatialCoordinateVariables
+from trefoil.render.renderers.stretched import StretchedRenderer
+from trefoil.utilities.color import Color
 from django.conf import settings
 from django.core.exceptions import ImproperlyConfigured
 from django.db import transaction

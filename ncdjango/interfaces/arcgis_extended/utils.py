@@ -1,7 +1,7 @@
-from clover.render.renderers.classified import ClassifiedRenderer
-from clover.render.renderers.stretched import StretchedRenderer
-from clover.render.renderers.unique import UniqueValuesRenderer
-from clover.utilities.color import Color
+from trefoil.render.renderers.classified import ClassifiedRenderer
+from trefoil.render.renderers.stretched import StretchedRenderer
+from trefoil.render.renderers.unique import UniqueValuesRenderer
+from trefoil.utilities.color import Color
 import six
 
 

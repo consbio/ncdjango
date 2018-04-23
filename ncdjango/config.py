@@ -1,6 +1,6 @@
-from clover.render.renderers.stretched import StretchedRenderer
-from clover.render.renderers.unique import UniqueValuesRenderer
-from clover.utilities.color import Color
+from trefoil.render.renderers.stretched import StretchedRenderer
+from trefoil.render.renderers.unique import UniqueValuesRenderer
+from trefoil.utilities.color import Color
 from ncdjango import utils
 
 DEFAULT_IMAGE_SIZE = (400, 400)

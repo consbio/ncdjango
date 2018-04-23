@@ -1,7 +1,7 @@
 import json
 import os
 
-from clover.geometry.bbox import BBox
+from trefoil.geometry.bbox import BBox
 from netCDF4 import Dataset
 import numpy
 from numpy.ma import masked_array

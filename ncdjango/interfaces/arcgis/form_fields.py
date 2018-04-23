@@ -1,6 +1,6 @@
 from datetime import datetime
 import json
-from clover.geometry.bbox import BBox
+from trefoil.geometry.bbox import BBox
 from django import forms
 from django.core.exceptions import ValidationError
 import pyproj

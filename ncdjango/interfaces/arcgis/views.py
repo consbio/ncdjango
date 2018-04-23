@@ -1,9 +1,9 @@
 import json
 from PIL import Image
-from clover.render.renderers.classified import ClassifiedRenderer
-from clover.render.renderers.legend import LegendElement
-from clover.render.renderers.stretched import StretchedRenderer
-from clover.utilities.color import Color
+from trefoil.render.renderers.classified import ClassifiedRenderer
+from trefoil.render.renderers.legend import LegendElement
+from trefoil.render.renderers.stretched import StretchedRenderer
+from trefoil.utilities.color import Color
 from django.conf import settings
 from django.http import HttpResponse
 from django.shortcuts import get_object_or_404

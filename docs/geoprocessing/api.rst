@@ -57,8 +57,8 @@ a renderer to use for published results:
 
 .. code-block:: python
 
-    from clover.render.renderers.stretched import StretchedRenderer
-    from clover.utilities.color import Color
+    from trefoil.render.renderers.stretched import StretchedRenderer
+    from trefoil.utilities.color import Color
 
     NC_REGISTERED_JOBS = {
         'some_job': {
@@ -74,7 +74,7 @@ a renderer to use for published results:
 
 .. note::
 
-    See https://github.com/consbio/clover/tree/master/clover/render/renderers for more information on available
+    See https://github.com/consbio/trefoil/tree/master/trefoil/render/renderers for more information on available
     renderers.
 
 ``results_renderer`` can also be a function which returns a renderer. The function will be called with the output

@@ -1,5 +1,5 @@
 import numpy
-from clover.geometry.bbox import BBox
+from trefoil.geometry.bbox import BBox
 from numpy.ma.core import is_masked
 
 

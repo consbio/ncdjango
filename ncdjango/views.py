@@ -9,8 +9,8 @@ from numpy.ma.core import is_masked
 from six.moves.urllib.error import URLError
 from six.moves.urllib.parse import unquote
 from PIL import Image
-from clover.geometry.bbox import BBox
-from clover.render.renderers.classified import ClassifiedRenderer
+from trefoil.geometry.bbox import BBox
+from trefoil.render.renderers.classified import ClassifiedRenderer
 from django.conf import settings
 from django.contrib.auth.decorators import login_required, permission_required
 from django.core.files import File

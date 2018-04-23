@@ -8,7 +8,7 @@ from importlib import import_module
 import errno
 import six
 from celery.task import task
-from clover.render.renderers import RasterRenderer
+from trefoil.render.renderers import RasterRenderer
 from django.conf import settings
 from django.core.exceptions import ImproperlyConfigured
 from django.db import transaction

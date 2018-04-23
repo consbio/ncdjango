@@ -6,7 +6,7 @@ Requirements
 
 * Python 2.7, Python 3.5+
 * Django 1.8 - 1.11
-* ``clover`` 0.2.0 (https://github.com/consbio/clover)
+* ``trefoil`` 0.3.0 (https://github.com/consbio/trefoil)
 * ``numpy`` (http://www.numpy.org)
 * ``django-tastypie`` 0.13.x (https://django-tastypie.readthedocs.io)
 * ``djangorestframework`` (http://www.django-rest-framework.org)
@@ -26,11 +26,6 @@ Installation
 Once the dependencies are installed, you can install ncdjango with::
 
    $ pip install ncdjango
-
-.. note::
-   The `clover` dependency is not the same as the `pip` package of the same name. `clover` must be installed from
-   https://github.com/consbio/clover. The correct package should be installed by `ncdjango`, but in case of problems,
-   it's good to check that you have the correct one.
 
 Setup
 -----

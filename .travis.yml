@@ -33,7 +33,7 @@ addons:
 before_install:
   - "pip install GDAL==1.10"
   - "pip install rasterio"
-  - "pip install git+https://github.com/consbio/clover.git"
+  - "pip install trefoil"
   - "pip install --upgrade setuptools"
 
 install:

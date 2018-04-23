@@ -4,8 +4,8 @@ import shutil
 from tempfile import mkdtemp
 from zipfile import ZipFile
 
-from clover.geometry.bbox import BBox
-from clover.netcdf.describe import describe
+from trefoil.geometry.bbox import BBox
+from trefoil.netcdf.describe import describe
 from django.conf.urls import url
 from django.core.exceptions import ObjectDoesNotExist
 from django.core.files.base import File

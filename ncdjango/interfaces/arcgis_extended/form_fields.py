@@ -1,5 +1,5 @@
 import json
-from clover.render.renderers import RasterRenderer
+from trefoil.render.renderers import RasterRenderer
 from django import forms
 from django.core.exceptions import ValidationError
 import six

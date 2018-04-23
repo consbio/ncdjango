@@ -117,7 +117,7 @@ Models
     .. py:attribute:: renderer
 
         The default renderer to use for this variable. See
-        https://github.com/consbio/clover/tree/master/clover/render/renderers for available renderers.
+        https://github.com/consbio/trefoil/tree/master/trefoil/render/renderers for available renderers.
 
     .. py:attribute:: full_extent
 
