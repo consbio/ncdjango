@@ -360,6 +360,10 @@ class IdentifyViewBase(NetCdfDatasetMixin, ServiceView):
                 if not self.is_y_increasing(variable):
                     cell_index[1] = dimensions[1] - cell_index[1] - 1
 
+                if any(x < 0 or x >= y for x, y in zip(cell_index, dimensions)):
+                    data[variable] = None
+                    continue
+
                 variable_data = self.get_grid_for_variable(
                     config.variable, time_index=time_index, x_slice=(cell_index[0], cell_index[0] + 1),
                     y_slice=(cell_index[1], cell_index[1] + 1)
