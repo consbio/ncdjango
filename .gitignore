@@ -1,6 +1,7 @@
 syntax: glob
-ncdjango.egg-info/
+*.pyc
 __pycache__
+ncdjango.egg-info/
 ncdjango/geoprocessing/parsetab.py
 ncdjango/geoprocessing/parser.out
 docs/_*
