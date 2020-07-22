@@ -15,6 +15,7 @@ setup(
         'netCDF4>=1.5.3', 'numpy>=1.19.0', 'pyproj>=1.9.4', 'fiona', 'trefoil', 'ply>=3.11',
         'celery>=4.4.6', 'djangorestframework', 'pytest-django'
     ],
+    tests_require=["pytest", "pytest-cov"],
     url='https://github.com/consbio/ncdjango',
     license='BSD',
 )

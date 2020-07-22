@@ -1,0 +1,3 @@
+[run]
+source = ncdjango
+data_file = .coverage

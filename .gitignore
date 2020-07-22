@@ -1,4 +1,5 @@
 syntax: glob
+.coverage
 *.pyc
 __pycache__
 ncdjango.egg-info/
