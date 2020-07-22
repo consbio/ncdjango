@@ -35,6 +35,7 @@ before_install:
   - "pip install rasterio"
   - "pip install trefoil"
   - "pip install --upgrade setuptools"
+  - "pip install pytest-cov"
   - "pip install coveralls"
 
 install:
