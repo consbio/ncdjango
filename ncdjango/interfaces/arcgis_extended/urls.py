@@ -4,6 +4,7 @@ from ncdjango.interfaces.arcgis.urls import ARCGIS_BASE_URL
 from ncdjango.interfaces.arcgis.views import MapServiceDetailView, IdentifyView, LayerListView, LayerDetailView
 from ncdjango.interfaces.arcgis_extended.views import GetImageView, LegendView
 
+
 urlpatterns = [
     url(r'^{}services/(?P<service_name>[\w\-/]+)/MapServer/?'.format(ARCGIS_BASE_URL), include([
         url(r'^$', MapServiceDetailView.as_view(), name='nc_arcgis_mapservice'),

@@ -4,6 +4,7 @@ from django.conf.urls import url, include
 from .views import GetImageView, MapServiceListView, MapServiceDetailView, LayerDetailView, LegendView
 from .views import LayerListView, IdentifyView
 
+
 ARCGIS_BASE_URL = getattr(settings, 'NC_ARCGIS_BASE_URL', 'arcgis/rest/')
 
 

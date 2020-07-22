@@ -1,5 +1,5 @@
 import calendar
-from datetime import timedelta
+import datetime
 import logging
 import uuid
 
@@ -74,7 +74,7 @@ class Variable(models.Model):
     or more variables. Each variable maps to a variable in the NetCDF dataset.
     """
 
-    service = models.ForeignKey(Service)
+    service = models.ForeignKey(Service, on_delete=models.CASCADE)
     index = models.PositiveIntegerField()
     variable = models.CharField(max_length=256)
     projection = models.TextField()  # PROJ4 definition
@@ -117,25 +117,25 @@ class Variable(models.Model):
                 next_value = lambda x: x.replace(year=x.year + years)
             elif units == 'months':
                 def _fn(x):
-                    year = x.year + (x.month+interval-1) // 12
-                    month = (x.month+interval) % 12 or 12
+                    year = x.year + (x.month + interval - 1) // 12
+                    month = (x.month + interval) % 12 or 12
                     day = min(x.day, calendar.monthrange(year, month)[1])
 
                     return x.replace(year=year, month=month, day=day)
                 next_value = _fn
             else:
                 if units == 'milliseconds':
-                    delta = timedelta(milliseconds=interval)
+                    delta = datetime.timedelta(milliseconds=interval)
                 elif units == 'seconds':
-                    delta = timedelta(seconds=interval)
+                    delta = datetime.timedelta(seconds=interval)
                 elif units == 'minutes':
-                    delta = timedelta(minutes=interval)
+                    delta = datetime.timedelta(minutes=interval)
                 elif units == 'hours':
-                    delta = timedelta(hours=interval)
+                    delta = datetime.timedelta(hours=interval)
                 elif units == 'days':
-                    delta = timedelta(days=interval)
+                    delta = datetime.timedelta(days=interval)
                 elif units == 'weeks':
-                    delta = timedelta(weeks=interval)
+                    delta = datetime.timedelta(weeks=interval)
                 else:
                     raise ValidationError(
                         "Service has an invalid time_interval_units: {}".format(self.service.time_interval_units)
@@ -174,7 +174,7 @@ class TemporaryFile(models.Model):
     @property
     def extension(self):
         if self.filename.find(".") != -1:
-            return self.filename[self.filename.rfind(".")+1:]
+            return self.filename[self.filename.rfind(".") + 1:]
         else:
             return ""
 
@@ -185,6 +185,8 @@ def temporary_file_deleted(sender, instance, **kwargs):
             instance.file.delete(save=False)
         except IOError:
             logger.exception("Error deleting temporary file: %s" % instance.file.name)
+
+
 post_delete.connect(temporary_file_deleted, sender=TemporaryFile)
 
 
@@ -213,7 +215,7 @@ class ProcessingResultService(models.Model):
     automatically generated from job results.
     """
 
-    job = models.ForeignKey(ProcessingJob)
-    service = models.ForeignKey(Service)
+    job = models.ForeignKey(ProcessingJob, on_delete=models.CASCADE)
+    service = models.ForeignKey(Service, on_delete=models.CASCADE)
     is_temporary = models.BooleanField(default=True)
     created = models.DateTimeField(auto_now_add=True)

@@ -16,6 +16,7 @@ DEFAULT_INSTALLED_INTERFACES = (
 INSTALLED_INTERFACES = getattr(settings, 'NC_INSTALLED_INTERFACES', DEFAULT_INSTALLED_INTERFACES)
 
 
+app_name = 'ncdjango'
 urlpatterns = []
 
 for interface in INSTALLED_INTERFACES:

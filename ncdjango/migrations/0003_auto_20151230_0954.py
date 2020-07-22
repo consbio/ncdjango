@@ -35,7 +35,7 @@ class Migration(migrations.Migration):
                 ('id', models.AutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
                 ('is_temporary', models.BooleanField(default=True)),
                 ('created', models.DateTimeField(auto_now_add=True)),
-                ('job', models.ForeignKey(to='ncdjango.ProcessingJob')),
+                ('job', models.ForeignKey(to='ncdjango.ProcessingJob', on_delete=models.CASCADE)),
             ],
         ),
         migrations.AlterField(
@@ -55,6 +55,6 @@ class Migration(migrations.Migration):
         migrations.AddField(
             model_name='processingresultservice',
             name='service',
-            field=models.ForeignKey(to='ncdjango.Service'),
+            field=models.ForeignKey(to='ncdjango.Service', on_delete=models.CASCADE),
         ),
     ]

@@ -66,7 +66,7 @@ class Migration(migrations.Migration):
                 ('time_interval', models.PositiveIntegerField(null=True)),
                 ('time_interval_units', models.CharField(max_length=15, choices=[('milliseconds', 'Milliseconds'), ('seconds', 'Seconds'), ('minutes', 'Minutes'), ('hours', 'Hours'), ('days', 'Days'), ('weeks', 'Weeks'), ('months', 'Months'), ('years', 'Years'), ('decades', 'Decades'), ('centuries', 'Centuries')], null=True)),
                 ('calendar', models.CharField(max_length=10, choices=[('standard', 'Standard Gregorian'), ('noleap', 'Standard, no leap years'), ('360', '360-day years')], null=True)),
-                ('service', models.ForeignKey(to='ncdjango.Service')),
+                ('service', models.ForeignKey(to='ncdjango.Service', on_delete=models.CASCADE)),
             ],
             options={
             },
