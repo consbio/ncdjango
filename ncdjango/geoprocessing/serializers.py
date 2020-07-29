@@ -1,9 +1,10 @@
 import json
 
-from ncdjango.geoprocessing.celery_tasks import run_job
-from ncdjango.geoprocessing.utils import REGISTERED_JOBS, get_task_instance
-from ncdjango.models import ProcessingJob
 from rest_framework import serializers
+from ncdjango.models import ProcessingJob
+
+from .celery_tasks import run_job
+from .utils import REGISTERED_JOBS, get_task_instance
 
 
 class ProcessingJobSerializer(serializers.ModelSerializer):

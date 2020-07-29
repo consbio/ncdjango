@@ -1,1 +1,1 @@
-import ncdjango.geoprocessing.tasks.raster
+from . import raster

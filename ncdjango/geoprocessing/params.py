@@ -3,15 +3,14 @@ from types import GeneratorType
 
 import netCDF4
 import numpy
-import six
 from django.core.exceptions import ObjectDoesNotExist
 from fiona.collection import Collection
 from shapely.geometry.base import BaseGeometry
 
-from ncdjango.geoprocessing.data import Raster
 from ncdjango.models import Service
 from ncdjango.utils import best_fit, timestamp_to_date
 from ncdjango.views import NetCdfDatasetMixin
+from .data import Raster
 
 
 class ParameterNotValidError(ValueError):
@@ -23,19 +22,19 @@ class ParameterBase(type):
 
     _parameters_by_id = {}
 
-    def __new__(mcs, name, bases, attrs):
-        new_class = super(ParameterBase, mcs).__new__(mcs, name, bases, attrs)
+    def __new__(cls, name, bases, attrs):
+        new_class = super(ParameterBase, cls).__new__(cls, name, bases, attrs)
 
         name = getattr(new_class, 'id', None)
         if name:
-            mcs._parameters_by_id[new_class.id] = new_class
+            cls._parameters_by_id[new_class.id] = new_class
 
-        setattr(new_class, '_parameters_by_id', mcs._parameters_by_id)
+        setattr(new_class, '_parameters_by_id', cls._parameters_by_id)
 
         return new_class
 
 
-class Parameter(six.with_metaclass(ParameterBase)):
+class Parameter(metaclass=ParameterBase):
     """
     Base parameter (input, output, or uniform) class for a task or workflow. Extended to implement specific parameter
     types.
@@ -197,6 +196,8 @@ class ListParameter(Parameter):
         args, kwargs = super(ListParameter, self).serialize_args()
         args.insert(0, [self.param_type.id, self.param_type.serialize_args()])
 
+        return args, kwargs
+
     @staticmethod
     def deserialize_args(args, kwargs):
         type_id, type_args = args[0]
@@ -217,7 +218,7 @@ class StringParameter(Parameter):
     def clean(self, value):
         """Cleans and returns the given value, or raises a ParameterNotValidError exception"""
 
-        if isinstance(value, six.string_types):
+        if isinstance(value, str):
             return value
         elif isinstance(value, numbers.Number):
             return str(value)
@@ -235,7 +236,7 @@ class NumberParameter(Parameter):
 
         if isinstance(value, numbers.Number):
             return value
-        elif isinstance(value, six.string_types):
+        elif isinstance(value, str):
             try:
                 value = float(value)
                 return int(value) if value.is_integer() else value
@@ -275,7 +276,7 @@ class BooleanParameter(Parameter):
     def clean(self, value):
         """Cleans and returns the given value, or raises a ParameterNotValidError exception"""
 
-        if isinstance(value, six.string_types) and value.lower() == 'false':
+        if isinstance(value, str) and value.lower() == 'false':
             return False
 
         return bool(value)
@@ -394,7 +395,7 @@ class RegisteredDatasetParameter(NetCdfDatasetMixin, Parameter):
     def clean(self, value):
         """Cleans and returns the given value, or raises a ParameterNotValidError exception"""
 
-        if not isinstance(value, six.string_types):
+        if not isinstance(value, str):
             raise ParameterNotValidError
 
         try:

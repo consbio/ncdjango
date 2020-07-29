@@ -1,7 +1,7 @@
 from rest_framework import viewsets, mixins
 
 from ncdjango.models import ProcessingJob
-from ncdjango.geoprocessing.serializers import ProcessingJobSerializer
+from .serializers import ProcessingJobSerializer
 
 
 class ProcessingJobsViewset(mixins.CreateModelMixin, mixins.RetrieveModelMixin, viewsets.GenericViewSet):

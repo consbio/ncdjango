@@ -1,6 +1,5 @@
 import numpy
 from trefoil.geometry.bbox import BBox
-from numpy.ma.core import is_masked
 
 
 class Raster(numpy.ma.MaskedArray):
@@ -17,7 +16,7 @@ class Raster(numpy.ma.MaskedArray):
         obj.y_increasing = y_increasing
         obj.__array_priority__ = 100
 
-        if is_masked(arr):
+        if numpy.ma.core.is_masked(arr):
             obj._mask = arr._mask
             obj._fill_value = arr._fill_value
 

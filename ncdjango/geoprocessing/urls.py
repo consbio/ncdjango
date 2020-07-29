@@ -1,7 +1,7 @@
 from django.conf.urls import url, include
 from rest_framework.routers import SimpleRouter
 
-from ncdjango.geoprocessing.views import ProcessingJobsViewset
+from .views import ProcessingJobsViewset
 
 
 router = SimpleRouter()

@@ -1,16 +1,13 @@
+import io
 import json
 import math
 import mimetypes
 import os
 import shutil
 import tempfile
+from urllib import error, request, parse
 
-from numpy.ma.core import is_masked
-from six.moves.urllib.error import URLError
-from six.moves.urllib.parse import unquote
 from PIL import Image
-from trefoil.geometry.bbox import BBox
-from trefoil.render.renderers.classified import ClassifiedRenderer
 from django.conf import settings
 from django.contrib.auth.decorators import login_required, permission_required
 from django.core.files import File
@@ -19,17 +16,19 @@ from django.shortcuts import get_object_or_404
 from django.utils.decorators import method_decorator
 from django.views.decorators.csrf import csrf_exempt
 from django.views.generic import View
-import netCDF4
 from django.views.generic.edit import ProcessFormView, FormMixin
+import netCDF4
 import numpy
 import pyproj
 from shapely.geometry import Point
-import six
-from ncdjango.exceptions import ConfigurationError
-from ncdjango.forms import TemporaryFileForm
-from ncdjango.geoimage import GeoImage
-from ncdjango.models import Service, SERVICE_DATA_ROOT, TemporaryFile
-from ncdjango.utils import project_geometry
+from trefoil.geometry.bbox import BBox
+from trefoil.render.renderers.classified import ClassifiedRenderer
+
+from .exceptions import ConfigurationError
+from .forms import TemporaryFileForm
+from .geoimage import GeoImage
+from .models import Service, SERVICE_DATA_ROOT, TemporaryFile
+from .utils import project_geometry
 
 FORCE_WEBP = getattr(settings, 'NC_FORCE_WEBP', False)
 ENABLE_STRIDING = getattr(settings, 'NC_ENABLE_STRIDING', False)
@@ -155,11 +154,11 @@ class GetImageViewBase(NetCdfDatasetMixin, ServiceView):
             return bbox
         else:
             if bbox.height * size_ratio >= bbox.width:
-                diff = bbox.height*size_ratio - bbox.width
-                return BBox((bbox.xmin - diff/2, bbox.ymin, bbox.xmax + diff/2, bbox.ymax), bbox.projection)
+                diff = bbox.height * size_ratio - bbox.width
+                return BBox((bbox.xmin - diff / 2, bbox.ymin, bbox.xmax + diff / 2, bbox.ymax), bbox.projection)
             else:
-                diff = abs(bbox.width/size_ratio - bbox.height)
-                return BBox((bbox.xmin, bbox.ymin - diff/2, bbox.xmax, bbox.ymax + diff/2), bbox.projection)
+                diff = abs(bbox.width / size_ratio - bbox.height)
+                return BBox((bbox.xmin, bbox.ymin - diff / 2, bbox.xmax, bbox.ymax + diff / 2), bbox.projection)
 
     def get_render_configurations(self, request, **kwargs):
         """
@@ -189,7 +188,7 @@ class GetImageViewBase(NetCdfDatasetMixin, ServiceView):
                 image.convert('RGB')
                 kwargs['progressive'] = True
 
-            buffer = six.BytesIO()
+            buffer = io.BytesIO()
             image.save(buffer, image_format, **kwargs)
             return buffer.getvalue(), "image/{}".format(image_format)
         else:
@@ -259,10 +258,10 @@ class GetImageViewBase(NetCdfDatasetMixin, ServiceView):
                 )
 
                 grid_bounds = [
-                    int(math.floor(float(native_extent.xmin-config.variable.full_extent.xmin) / cell_size[0])) - 1,
-                    int(math.floor(float(native_extent.ymin-config.variable.full_extent.ymin) / cell_size[1])) - 1,
-                    int(math.ceil(float(native_extent.xmax-config.variable.full_extent.xmin) / cell_size[0])) + 1,
-                    int(math.ceil(float(native_extent.ymax-config.variable.full_extent.ymin) / cell_size[1])) + 1
+                    int(math.floor(float(native_extent.xmin - config.variable.full_extent.xmin) / cell_size[0])) - 1,
+                    int(math.floor(float(native_extent.ymin - config.variable.full_extent.ymin) / cell_size[1])) - 1,
+                    int(math.ceil(float(native_extent.xmax - config.variable.full_extent.xmin) / cell_size[0])) + 1,
+                    int(math.ceil(float(native_extent.ymax - config.variable.full_extent.ymin) / cell_size[1])) + 1
                 ]
 
                 grid_bounds = [
@@ -276,10 +275,10 @@ class GetImageViewBase(NetCdfDatasetMixin, ServiceView):
                     continue
 
                 grid_extent = BBox((
-                    config.variable.full_extent.xmin + grid_bounds[0]*cell_size[0],
-                    config.variable.full_extent.ymin + grid_bounds[1]*cell_size[1],
-                    config.variable.full_extent.xmin + grid_bounds[2]*cell_size[0],
-                    config.variable.full_extent.ymin + grid_bounds[3]*cell_size[1]
+                    config.variable.full_extent.xmin + grid_bounds[0] * cell_size[0],
+                    config.variable.full_extent.ymin + grid_bounds[1] * cell_size[1],
+                    config.variable.full_extent.xmin + grid_bounds[2] * cell_size[0],
+                    config.variable.full_extent.ymin + grid_bounds[3] * cell_size[1]
                 ), native_extent.projection)
 
                 if not self.is_y_increasing(config.variable):
@@ -354,8 +353,8 @@ class IdentifyViewBase(NetCdfDatasetMixin, ServiceView):
                     float(variable.full_extent.height) / dimensions[1]
                 )
                 cell_index = [
-                    int(float(geometry.x-variable.full_extent.xmin) / cell_size[0]),
-                    int(float(geometry.y-variable.full_extent.ymin) / cell_size[1])
+                    int(float(geometry.x - variable.full_extent.xmin) / cell_size[0]),
+                    int(float(geometry.y - variable.full_extent.ymin) / cell_size[1])
                 ]
                 if not self.is_y_increasing(variable):
                     cell_index[1] = dimensions[1] - cell_index[1] - 1
@@ -371,7 +370,7 @@ class IdentifyViewBase(NetCdfDatasetMixin, ServiceView):
 
                 if len(variable_data):
                     value = variable_data[0][0]
-                    data[variable] = None if is_masked(value) else float(value)
+                    data[variable] = None if numpy.ma.core.is_masked(value) else float(value)
 
             data, content_type = self.serialize_data(data)
             return self.create_response(request, data, content_type=content_type)
@@ -423,7 +422,7 @@ class LegendViewBase(NetCdfDatasetMixin, ServiceView):
                 data[config.variable] = config.renderer.get_legend(*config.size)
 
             data, content_type = self.serialize_data(data)
-            return self.create_response(request, data,content_type=content_type)
+            return self.create_response(request, data, content_type=content_type)
         finally:
             self.close_dataset()
 
@@ -438,10 +437,10 @@ class TemporaryFileUploadViewBase(View):
     def process_temporary_file(self, tmp_file):
         """Truncates the filename if necessary, saves the model, and returns a response"""
 
-        #Truncate filename if necessary
+        # Truncate filename if necessary
         if len(tmp_file.filename) > 100:
             base_filename = tmp_file.filename[:tmp_file.filename.rfind(".")]
-            tmp_file.filename = "%s.%s" % (base_filename[:99-len(tmp_file.extension)], tmp_file.extension)
+            tmp_file.filename = "%s.%s" % (base_filename[:99 - len(tmp_file.extension)], tmp_file.extension)
 
         tmp_file.save()
 
@@ -474,12 +473,12 @@ class TemporaryFileUploadUrlView(TemporaryFileUploadViewBase):
     def dispatch(self, request, *args, **kwargs):
         try:
             return super(TemporaryFileUploadUrlView, self).dispatch(request, *args, **kwargs)
-        except URLError as e:
+        except error.URLError as e:
             return HttpResponseBadRequest(e.reason)
 
     def download_file(self, url):
 
-        url_f = six.moves.urllib.request.urlopen(url)
+        url_f = request.urlopen(url)
 
         filename = url.split('?', 1)[0].split('/')[-1]
         if 'filename=' in url_f.info().get('Content-Disposition', ''):
@@ -498,7 +497,7 @@ class TemporaryFileUploadUrlView(TemporaryFileUploadViewBase):
 
     def get(self, request):
         if request.GET.get('url'):
-            return self.process_temporary_file(self.download_file(unquote(request.GET.get('url'))))
+            return self.process_temporary_file(self.download_file(parse.unquote(request.GET.get('url'))))
         else:
             return HttpResponseBadRequest()
 

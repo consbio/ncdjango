@@ -1,23 +1,25 @@
 import json
 from PIL import Image
-from trefoil.render.renderers.classified import ClassifiedRenderer
-from trefoil.render.renderers.legend import LegendElement
-from trefoil.render.renderers.stretched import StretchedRenderer
-from trefoil.utilities.color import Color
+
 from django.conf import settings
 from django.http import HttpResponse
 from django.shortcuts import get_object_or_404
 from django.views.generic.detail import DetailView
 from django.views.generic.list import ListView
-import pyproj
-import six
+from pyproj import Proj
+from trefoil.render.renderers.classified import ClassifiedRenderer
+from trefoil.render.renderers.legend import LegendElement
+from trefoil.render.renderers.stretched import StretchedRenderer
+from trefoil.utilities.color import Color
+
 from ncdjango.config import RenderConfiguration, IdentifyConfiguration, LegendConfiguration, ImageConfiguration
 from ncdjango.exceptions import ConfigurationError
-from ncdjango.interfaces.arcgis.forms import GetImageForm, IdentifyForm
-from ncdjango.interfaces.arcgis.utils import extent_to_envelope
 from ncdjango.models import Service, Variable
 from ncdjango.utils import proj4_to_epsg, date_to_timestamp
 from ncdjango.views import GetImageViewBase, IdentifyViewBase, LegendViewBase, FORCE_WEBP
+
+from .forms import GetImageForm, IdentifyForm
+from .utils import extent_to_envelope
 
 ALLOW_BEST_FIT_TIME_INDEX = getattr(settings, 'NC_ALLOW_BEST_FIT_TIME_INDEX', True)
 
@@ -58,13 +60,13 @@ class MapServiceDetailView(DetailView):
     slug_url_kwarg = 'service_name'
 
     def render_to_response(self, context, **response_kwargs):
-        epsg = proj4_to_epsg(pyproj.Proj(str(self.object.projection)))
+        epsg = proj4_to_epsg(Proj(str(self.object.projection)))
         if epsg:
             full_extent = self.object.full_extent
             initial_extent = self.object.initial_extent
         else:
             epsg = 102100
-            projection = pyproj.Proj('+units=m +init=epsg:3857')
+            projection = Proj('+units=m +init=epsg:3857')
             full_extent = self.object.full_extent.project(projection)
             initial_extent = self.object.initial_extent.project(projection)
 
@@ -98,7 +100,7 @@ class MapServiceDetailView(DetailView):
         if self.object.supports_time:
             data['timeInfo'] = {
                 'timeExtent': [
-                    date_to_timestamp(self.object.time_start)*1000, date_to_timestamp(self.object.time_end)*1000
+                    date_to_timestamp(self.object.time_start) * 1000, date_to_timestamp(self.object.time_end) * 1000
                 ],
                 'timeRelation': 'esriTimeRelationOverlaps',
                 'defaultTimeInterval': self.object.time_interval,
@@ -146,7 +148,7 @@ class LayerDetailView(DetailView):
             full_extent = variable.full_extent
         else:
             epsg = 102100
-            projection = pyproj.Proj('+units=m +init=epsg:3857')
+            projection = Proj('+units=m +init=epsg:3857')
             full_extent = variable.full_extent.project(projection)
 
         data = {
@@ -175,7 +177,9 @@ class LayerDetailView(DetailView):
 
         if variable.supports_time:
             data['timeInfo'] = {
-                'timeExtent': [date_to_timestamp(variable.time_start)*1000, date_to_timestamp(variable.time_end)*1000],
+                'timeExtent': [
+                    date_to_timestamp(variable.time_start) * 1000, date_to_timestamp(variable.time_end) * 1000
+                ],
                 'timeInterval': variable.service.time_interval,
                 'timeIntervalUnits': TIME_UNITS_MAP.get(variable.service.time_interval_units),
                 'exportOptions': {
@@ -252,8 +256,8 @@ class GetImageView(ArcGISMapServerMixin, GetImageViewBase):
             'bbox': self.service.full_extent,
             'size': '400,400',
             'dpi': 200,
-            'image_projection': pyproj.Proj(str(self.service.projection)),
-            'bbox_projection': pyproj.Proj(str(self.service.projection)),
+            'image_projection': Proj(str(self.service.projection)),
+            'bbox_projection': Proj(str(self.service.projection)),
             'image_format': 'png',
             'transparent': True
         }
@@ -306,7 +310,7 @@ class IdentifyView(ArcGISMapServerMixin, IdentifyViewBase):
         return {
             'response_format': 'html',
             'geometry_type': 'esriGeometryPoint',
-            'projection': pyproj.Proj(str(self.service.projection)),
+            'projection': Proj(str(self.service.projection)),
             'return_geometry': True,
             'maximum_allowable_offset': 2,
             'geometry_precision': 3,
@@ -326,7 +330,7 @@ class IdentifyView(ArcGISMapServerMixin, IdentifyViewBase):
                         'Pixel value': value
                     }
                 }
-                for variable, value in six.iteritems(data)
+                for variable, value in data.items()
             ]
         }
 
@@ -367,7 +371,7 @@ class LegendView(ArcGISMapServerMixin, LegendViewBase):
                 element = elements[0]
                 labels = element.labels
 
-                #Split into multiple images
+                # Split into multiple images
                 full_image = element.image
                 top_image = Image.new('RGBA', (20, 20), color=(0, 0, 0, 0))
                 top_image.paste(full_image.crop((0, 0, 20, 20)))
@@ -403,7 +407,7 @@ class LegendView(ArcGISMapServerMixin, LegendViewBase):
                     'maxScale': 0,
                     'legend': get_legend_elements(elements)
                 }
-                for variable, elements in six.iteritems(data)
+                for variable, elements in data.items()
             ]
         }
 

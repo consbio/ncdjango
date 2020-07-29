@@ -1,16 +1,18 @@
 from datetime import datetime
 import json
-from trefoil.geometry.bbox import BBox
+
 from django import forms
 from django.core.exceptions import ValidationError
-import pyproj
+from pyproj import Proj
 from shapely.geometry import MultiPoint
 from shapely.geometry.base import BaseGeometry
 from shapely.geometry.multilinestring import MultiLineString
 from shapely.geometry.point import Point
 from shapely.geometry.polygon import LinearRing, Polygon
-from ncdjango.interfaces.arcgis.wkid import wkid_to_proj
+from trefoil.geometry.bbox import BBox
+
 from ncdjango.utils import proj4_to_epsg, timestamp_to_date, date_to_timestamp
+from .wkid import wkid_to_proj
 
 
 class BoundingBoxField(forms.Field):
@@ -99,7 +101,7 @@ class SrField(forms.Field):
     """Spatial reference field"""
 
     def to_python(self, value):
-        if not value or isinstance(value, pyproj.Proj):
+        if not value or isinstance(value, Proj):
             return value
 
         try:
@@ -114,9 +116,9 @@ class SrField(forms.Field):
 
             # Well-known ids below 32767 have a corresponding EPSG
             if wkid < 32767:
-                return pyproj.Proj('+init=epsg:{}'.format(wkid))
+                return Proj('+init=epsg:{}'.format(wkid))
             elif wkid in wkid_to_proj:
-                return pyproj.Proj(str(wkid_to_proj[wkid]))
+                return Proj(str(wkid_to_proj[wkid]))
             else:
                 raise RuntimeError
         except ValueError:
@@ -125,7 +127,7 @@ class SrField(forms.Field):
             raise ValidationError('Projection not supported')
 
     def prepare_value(self, value):
-        if not value or not isinstance(value, pyproj.Proj):
+        if not value or not isinstance(value, Proj):
             return value
 
         epsg = proj4_to_epsg(value)
@@ -144,7 +146,7 @@ class TimeField(forms.Field):
 
         try:
             if ',' in value:
-                return tuple([timestamp_to_date(int(x)//1000) for x in value.split(',')])
+                return tuple([timestamp_to_date(int(x) // 1000) for x in value.split(',')])
             else:
                 return datetime(int(value))
         except ValueError:
@@ -155,9 +157,9 @@ class TimeField(forms.Field):
             return value
 
         if isinstance(value, (tuple, list)):
-            return ",".join([str(date_to_timestamp(x)*1000) for x in value])
+            return ",".join([str(date_to_timestamp(x) * 1000) for x in value])
         else:
-            return str(date_to_timestamp(value)*1000)
+            return str(date_to_timestamp(value) * 1000)
 
 
 class DynamicLayersField(forms.Field):

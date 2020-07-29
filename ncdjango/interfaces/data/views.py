@@ -1,16 +1,18 @@
 import json
+import math
+
 from django.conf import settings
 from django.http import HttpResponse
 from django.shortcuts import get_object_or_404
-import math
 import numpy
-import pyproj
+from pyproj import Proj
 from shapely.geometry.point import Point
+
 from ncdjango.exceptions import ConfigurationError
-from ncdjango.interfaces.data.classify import jenks, quantile, equal
-from ncdjango.interfaces.data.forms import PointForm
 from ncdjango.utils import project_geometry
 from ncdjango.views import ServiceView, NetCdfDatasetMixin
+from .classify import jenks, quantile, equal
+from .forms import PointForm
 
 MAX_UNIQUE_VALUES = getattr(settings, 'NC_MAX_UNIQUE_VALUES', 100)
 
@@ -116,7 +118,7 @@ class ValuesAtPointView(DataViewBase):
 
     def handle_request(self, request, **kwargs):
         variable = self.get_variable()
-        form_params = {'projection': pyproj.Proj(str(variable.projection))}
+        form_params = {'projection': Proj(str(variable.projection))}
         form_params.update(kwargs)
         form = self.form_class(form_params)
         if form.is_valid():
@@ -125,7 +127,7 @@ class ValuesAtPointView(DataViewBase):
             raise ConfigurationError
 
         point = project_geometry(
-            Point(form_data['x'], form_data['y']), form_data['projection'], pyproj.Proj(str(variable.projection))
+            Point(form_data['x'], form_data['y']), form_data['projection'], Proj(str(variable.projection))
         )
         data = {'values': []}
         dataset = self.open_dataset(self.service)
@@ -154,8 +156,8 @@ class ValuesAtPointView(DataViewBase):
             )
 
             cell_index = [
-                int(float(point.x-variable.full_extent.xmin) / cell_size[0]),
-                int(float(point.y-variable.full_extent.ymin) / cell_size[1])
+                int(float(point.x - variable.full_extent.xmin) / cell_size[0]),
+                int(float(point.y - variable.full_extent.ymin) / cell_size[1])
             ]
 
             if not self.is_y_increasing(variable):

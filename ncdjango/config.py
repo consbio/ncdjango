@@ -1,7 +1,7 @@
 from trefoil.render.renderers.stretched import StretchedRenderer
 from trefoil.render.renderers.unique import UniqueValuesRenderer
 from trefoil.utilities.color import Color
-from ncdjango import utils
+from . import utils
 
 DEFAULT_IMAGE_SIZE = (400, 400)
 DEFAULT_IMAGE_FORMAT = "png"

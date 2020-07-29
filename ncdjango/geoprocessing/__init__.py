@@ -1,1 +1,1 @@
-import ncdjango.geoprocessing.tasks
+from . import tasks

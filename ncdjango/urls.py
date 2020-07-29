@@ -5,8 +5,8 @@ from django.conf.urls import include, url
 from django.core.exceptions import ImproperlyConfigured
 from tastypie.api import Api
 
-from ncdjango.api import TemporaryFileResource, ServiceResource, VariableResource
-from ncdjango.views import TemporaryFileUploadFormView, TemporaryFileUploadUrlView, TemporaryFileDownloadView
+from .api import TemporaryFileResource, ServiceResource, VariableResource
+from .views import TemporaryFileUploadFormView, TemporaryFileUploadUrlView, TemporaryFileDownloadView
 
 DEFAULT_INSTALLED_INTERFACES = (
     'ncdjango.interfaces.data',

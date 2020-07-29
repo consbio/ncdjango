@@ -1,11 +1,9 @@
 import logging
-import operator
-
 import math
+import operator
+import time
 
 import numpy
-import six
-import time
 from ply import lex, yacc
 from rasterio.dtypes import is_ndarray
 
@@ -30,8 +28,8 @@ class Lexer(object):
     }
 
     tokens = [
-        'COMMA', 'STR', 'ID', 'INT', 'FLOAT', 'ADD', 'SUB', 'POW', 'MUL', 'DIV', 'MOD', 'AND', 'OR', 'EQ', 'LTE', 'GTE',
-        'LT', 'GT', 'LPAREN', 'RPAREN', 'LBRACK', 'RBRACK', 'TRUE', 'FALSE', 'FUNC'
+        'COMMA', 'STR', 'ID', 'INT', 'FLOAT', 'ADD', 'SUB', 'POW', 'MUL', 'DIV', 'MOD', 'AND', 'OR', 'EQ',
+        'LTE', 'GTE', 'LT', 'GT', 'LPAREN', 'RPAREN', 'LBRACK', 'RBRACK', 'TRUE', 'FALSE', 'FUNC'
     ]
 
     t_ignore = ' \t\n'
@@ -293,7 +291,7 @@ class Parser(object):
                     raise TypeError("Not a valid array index: '{}'".format(index))
 
             elif isinstance(obj, dict):
-                if not isinstance(index, (six.string_types, int)):
+                if not isinstance(index, (str, int)):
                     raise TypeError("Not a valid dictionary index: '{}'".format(index))
 
             else:
@@ -495,7 +493,7 @@ class Parser(object):
         else:
             return int(value)
 
-    def fn_int32(self, value):
+    def fn_int64(self, value):
         """
         Return the value cast to an 64-bit signed integer (numpy array) or a Python int (single value)
 
@@ -579,7 +577,7 @@ class Parser(object):
 
             return result.execute() if isinstance(result, Instruction) else result
         finally:
-            logger.info('Executed expression in {:.3f} seconds: {}'.format(time.time()-start, expr))
+            logger.info('Executed expression in {:.3f} seconds: {}'.format(time.time() - start, expr))
             self.context = {}
             self.parser.parse('1', lexer=self.lexer)  # Clear out references to potentially large objects
 
@@ -593,7 +591,7 @@ class Instruction(object):
         self.locals = context
 
     def execute(self):
-        context = {k: v.execute() if isinstance(v, Instruction) else v for k, v in six.iteritems(self.locals)}
+        context = {k: v.execute() if isinstance(v, Instruction) else v for k, v in self.locals.items()}
 
         try:
             return eval(self.compiled, None, context)

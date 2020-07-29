@@ -1,9 +1,9 @@
 import copy
 import json
 import logging
-import six
 import time
-from ncdjango.geoprocessing.params import ParameterCollection, Parameter
+
+from .params import ParameterCollection, Parameter
 
 logger = logging.getLogger(__name__)
 
@@ -13,19 +13,19 @@ class TaskBase(type):
 
     _tasks_by_name = {}
 
-    def __new__(mcs, name, bases, attrs):
-        new_class = super(TaskBase, mcs).__new__(mcs, name, bases, attrs)
+    def __new__(cls, name, bases, attrs):
+        new_class = super(TaskBase, cls).__new__(cls, name, bases, attrs)
 
         name = getattr(new_class, 'name', None)
         if name:
-            mcs._tasks_by_name[new_class.name] = new_class
+            cls._tasks_by_name[new_class.name] = new_class
 
-        setattr(new_class, '_tasks_by_name', mcs._tasks_by_name)
+        setattr(new_class, '_tasks_by_name', cls._tasks_by_name)
 
         return new_class
 
 
-class Task(six.with_metaclass(TaskBase)):
+class Task(metaclass=TaskBase):
     """A discrete task with defined inputs and outputs. Extended to implement specific functionality."""
 
     name = ''
@@ -70,7 +70,7 @@ class Task(six.with_metaclass(TaskBase)):
         params = ParameterCollection(self.inputs)
         call_kwargs = {}
 
-        for k, v in six.iteritems(inputs):
+        for k, v in inputs.items():
             try:
                 params[k] = v
             except KeyError:
@@ -134,7 +134,7 @@ class Workflow(Task):
     def _execute_node(self, node, workflow_inputs):
         task_inputs = {}
 
-        for name, (source, value) in six.iteritems(node.inputs):
+        for name, (source, value) in node.inputs.items():
             if source == 'input':
                 if value in workflow_inputs:
                     task_inputs[name] = workflow_inputs[value]
@@ -162,7 +162,7 @@ class Workflow(Task):
     def execute(self, **kwargs):
         outputs = ParameterCollection(self.outputs)
 
-        for param, (node_id, name) in six.iteritems(self.output_mapping):
+        for param, (node_id, name) in self.output_mapping.items():
             node = self.nodes_by_id[node_id]
 
             if not node.completed:
@@ -170,7 +170,7 @@ class Workflow(Task):
 
             outputs[param] = node.outputs[name]
 
-        for node in six.itervalues(self.nodes_by_id):
+        for node in self.nodes_by_id.values():
             node.outputs = None
             node.completed = False
 
@@ -194,7 +194,7 @@ class Workflow(Task):
         node = WorkflowNode(node_id, task, inputs)
         self.nodes_by_id[node_id] = node
 
-        for source, value in six.itervalues(inputs):
+        for source, value in inputs.values():
             if source == 'dependency':
                 dependents = self.dependents_by_node_id.get(value[0], set())
                 dependents.add(node_id)
@@ -227,7 +227,7 @@ class Workflow(Task):
             },
             'inputs': [],
             'workflow': [],
-            'outputs': [{'name': k, 'node': v} for k, v in six.iteritems(self.output_mapping)]
+            'outputs': [{'name': k, 'node': v} for k, v in self.output_mapping.items()]
         }
 
         for parameter in self.inputs:
@@ -245,7 +245,7 @@ class Workflow(Task):
 
             d['inputs'].append(input_info)
 
-        for node in sorted(six.itervalues(self.nodes_by_id), key=lambda x: x.id):
+        for node in sorted(self.nodes_by_id.values(), key=lambda x: x.id):
             task_name = node.task.name
             if not task_name:
                 raise ValueError('The task {0} does not have a name and therefore cannot be serialized.'.format(
@@ -253,7 +253,7 @@ class Workflow(Task):
                 )
 
             node_inputs = {}
-            for input_name, (source, value) in six.iteritems(node.inputs):
+            for input_name, (source, value) in node.inputs.items():
                 input_info = {'source': source}
 
                 if source == 'input':
@@ -294,7 +294,7 @@ class Workflow(Task):
 
         for node in d.get('workflow', []):
             node_inputs = {}
-            for k, v in six.iteritems(node.get('inputs', {})):
+            for k, v in node.get('inputs', {}).items():
                 node_inputs[k] = (v['source'], v.get('input') or v.get('node'))
 
             workflow.add_node(node['id'], Task.by_name(node['task'])(), node_inputs)

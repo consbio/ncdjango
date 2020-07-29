@@ -1,8 +1,6 @@
 from django import forms
 from django.core.exceptions import ValidationError
-import six
-from ncdjango.interfaces.arcgis.form_fields import BoundingBoxField, SrField, TimeField, DynamicLayersField, \
-    GeometryField
+from . import form_fields
 
 
 class ArcGisFormBase(forms.Form):
@@ -22,7 +20,7 @@ class ArcGisFormBase(forms.Form):
         """Maps parameters to form field names"""
 
         d = {}
-        for k, v in six.iteritems(params):
+        for k, v in params.items():
             d[cls.FIELD_MAP.get(k.lower(), k)] = v
         return d
 
@@ -40,7 +38,7 @@ class GetImageForm(ArcGisFormBase):
         'dynamiclayers': 'dynamic_layers',
         'gdbversion': 'gdb_version'
     }
-    
+
     IMAGE_FORMAT_CHOICES = (
         ('png', 'PNG'),
         ('png8', 'PNG8'),
@@ -53,18 +51,18 @@ class GetImageForm(ArcGisFormBase):
         ('png32', "PNG32")
     )
 
-    bbox = BoundingBoxField()
+    bbox = form_fields.BoundingBoxField()
     size = forms.CharField()
     dpi = forms.CharField()  # Unused
-    image_projection = SrField()
-    bbox_projection = SrField()
+    image_projection = form_fields.SrField()
+    bbox_projection = form_fields.SrField()
     image_format = forms.CharField()
     layer_definitions = forms.CharField(required=False)  # Unused
     layers = forms.CharField(required=False)
     transparent = forms.BooleanField()
-    time = TimeField(required=False)
+    time = form_fields.TimeField(required=False)
     layer_time_options = forms.CharField(required=False)
-    dynamic_layers = DynamicLayersField(required=False)
+    dynamic_layers = form_fields.DynamicLayersField(required=False)
     gdb_version = forms.CharField(required=False)  # Unused
     map_scale = forms.FloatField(required=False)  # Unused
 
@@ -111,15 +109,15 @@ class IdentifyForm(ArcGisFormBase):
         'gdbversion': 'gdb_version'
     }
 
-    geometry = GeometryField()
+    geometry = form_fields.GeometryField()
     geometry_type = forms.CharField()
-    projection = SrField(required=False)
+    projection = form_fields.SrField(required=False)
     layer_definitions = forms.CharField(required=False)  # Unused
-    time = TimeField(required=False)
+    time = form_fields.TimeField(required=False)
     layer_time_options = forms.CharField(required=False)  # Unused
     layers = forms.CharField(required=False)
     tolerance = forms.IntegerField()
-    map_extent = BoundingBoxField()
+    map_extent = form_fields.BoundingBoxField()
     display_properties = forms.CharField()
     return_geometry = forms.BooleanField(required=False)  # Unused
     maximum_allowable_offset = forms.FloatField(required=False)  # Unused

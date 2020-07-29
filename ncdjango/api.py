@@ -1,18 +1,16 @@
+import io
 import logging
 import os
 import shutil
 from tempfile import mkdtemp
 from zipfile import ZipFile
 
-from trefoil.geometry.bbox import BBox
-from trefoil.netcdf.describe import describe
 from django.conf.urls import url
 from django.core.exceptions import ObjectDoesNotExist
 from django.core.files.base import File
 from django.core.files.storage import default_storage
 from django.db.transaction import atomic
-from django.utils.six import BytesIO
-import pyproj
+from pyproj import Proj
 from tastypie import fields
 from tastypie.authentication import SessionAuthentication, MultiAuthentication, ApiKeyAuthentication
 from tastypie.authorization import DjangoAuthorization
@@ -21,9 +19,11 @@ from tastypie.http import HttpBadRequest
 from tastypie.resources import ModelResource
 from tastypie.serializers import Serializer
 from tastypie.utils import trailing_slash
+from trefoil.geometry.bbox import BBox
+from trefoil.netcdf.describe import describe
 
-from ncdjango.interfaces.arcgis_extended.utils import get_renderer_from_definition
-from ncdjango.models import TemporaryFile, Service, Variable, SERVICE_DATA_ROOT
+from .interfaces.arcgis_extended.utils import get_renderer_from_definition
+from .models import TemporaryFile, Service, Variable, SERVICE_DATA_ROOT
 
 
 logger = logging.getLogger(__name__)
@@ -148,7 +148,7 @@ class ServiceResource(ModelResource):
     def obj_create(self, bundle, **kwargs):
         bundle = super(ServiceResource, self).obj_create(bundle, **kwargs)
 
-        projection = pyproj.Proj(str(bundle.obj.projection))
+        projection = Proj(str(bundle.obj.projection))
         bundle.obj.full_extent.projection = projection
         bundle.obj.initial_extent.projection = projection
         for variable in bundle.obj.variable_set.all():
@@ -167,12 +167,12 @@ class ServiceResource(ModelResource):
                         break
                 if not nc_name:
                     raise ImmediateHttpResponse(HttpBadRequest('Could not find .nc file in zip archive'))
-                fp = File(BytesIO(zf.read(name)))
+                fp = File(io.BytesIO(zf.read(name)))
             else:
                 fp = File(tmp_file.file)
             fp.open()
 
-            base_filename = tmp_file.filename[:-len(tmp_file.extension)-1]
+            base_filename = tmp_file.filename[:-len(tmp_file.extension) - 1]
             name = default_storage.save(
                 "{0}{1}/{2}.nc".format(SERVICE_DATA_ROOT, bundle.obj.name, base_filename), fp
             )
@@ -244,6 +244,6 @@ class VariableResource(ModelResource):
         if not bundle.obj.projection:
             bundle.obj.projection = bundle.obj.service.projection
 
-        bundle.obj.full_extent.projection = pyproj.Proj(str(bundle.obj.projection))
+        bundle.obj.full_extent.projection = Proj(str(bundle.obj.projection))
 
         return super(VariableResource, self).save(bundle, skip_errors=skip_errors)

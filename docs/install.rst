@@ -17,7 +17,6 @@ Requirements
 * ``ply`` (https://pypi.python.org/pypi/ply)
 * ``celery`` (http://www.celeryproject.org)
 * ``Pillow`` (https://pypi.python.org/pypi/Pillow)
-* ``six``
 
 
 Installation

@@ -1,6 +1,6 @@
 from django.conf.urls import url, include
 
-from ncdjango.interfaces.data.views import RangeView, ClassifyView, UniqueValuesView, ValuesAtPointView
+from .views import RangeView, ClassifyView, UniqueValuesView, ValuesAtPointView
 
 
 urlpatterns = [

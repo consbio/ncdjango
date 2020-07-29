@@ -2,24 +2,23 @@ import os
 from importlib import import_module
 
 import numpy
-import six
-from trefoil.netcdf.crs import set_crs
-from trefoil.netcdf.variable import SpatialCoordinateVariables
-from trefoil.render.renderers.stretched import StretchedRenderer
-from trefoil.utilities.color import Color
 from django.conf import settings
 from django.core.exceptions import ImproperlyConfigured
 from django.db import transaction
 from netCDF4 import Dataset
-from numpy.ma.core import is_masked
 from rasterio.dtypes import is_ndarray
 from shapely.geometry import shape
+from trefoil.netcdf.crs import set_crs
+from trefoil.netcdf.variable import SpatialCoordinateVariables
+from trefoil.render.renderers.stretched import StretchedRenderer
+from trefoil.utilities.color import Color
 
-from ncdjango.geoprocessing import params
-from ncdjango.geoprocessing.data import is_raster
-from ncdjango.geoprocessing.params import ParameterNotValidError
-from ncdjango.geoprocessing.workflow import Workflow
 from ncdjango.models import SERVICE_DATA_ROOT, Service, Variable, ProcessingResultService
+
+from . import params
+from .data import is_raster
+from .params import ParameterNotValidError
+from .workflow import Workflow
 
 REGISTERED_JOBS = getattr(settings, 'NC_REGISTERED_JOBS', {})
 
@@ -87,7 +86,7 @@ def process_web_inputs(task, inputs):
 def process_web_outputs(results, job, publish_raster_results=False, renderer_or_fn=None):
     outputs = results.format_args()
 
-    for k, v in six.iteritems(outputs):
+    for k, v in iter(outputs.items()):
         if is_raster(v) and publish_raster_results:
             service_name = '{0}/{1}'.format(job.uuid, k)
             rel_path = '{}.nc'.format(service_name)
@@ -105,7 +104,7 @@ def process_web_outputs(results, job, publish_raster_results=False, renderer_or_
                 coord_vars = SpatialCoordinateVariables.from_bbox(v.extent, *reversed(v.shape))
                 coord_vars.add_to_dataset(ds, x_var, y_var)
 
-                fill_value = v.fill_value if is_masked(v) else None
+                fill_value = v.fill_value if numpy.ma.core.is_masked(v) else None
                 data_var = ds.createVariable('data', v.dtype, dimensions=(y_var, x_var), fill_value=fill_value)
                 data_var[:] = v
                 set_crs(ds, 'data', v.extent.projection)
@@ -122,7 +121,9 @@ def process_web_outputs(results, job, publish_raster_results=False, renderer_or_
             with transaction.atomic():
                 service = Service.objects.create(
                     name=service_name,
-                    description='This service has been automatically generated from the result of a geoprocessing job.',
+                    description=(
+                        'This service has been automatically generated from the result of a geoprocessing job.'
+                    ),
                     data_path=rel_path,
                     projection=v.extent.projection.srs,
                     full_extent=v.extent,

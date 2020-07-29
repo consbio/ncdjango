@@ -1,10 +1,10 @@
 from ncdjango.interfaces.arcgis import forms
-from ncdjango.interfaces.arcgis_extended.form_fields import StyleField
+from . import form_fields
 
 
 class GetImageForm(forms.GetImageForm):
-    styles = StyleField(required=False)
+    styles = form_fields.StyleField(required=False)
 
 
 class LegendForm(forms.ArcGisFormBase):
-    styles = StyleField(required=False)
+    styles = form_fields.StyleField(required=False)

@@ -2,7 +2,7 @@ from django.conf.urls import url, include
 
 from ncdjango.interfaces.arcgis.urls import ARCGIS_BASE_URL
 from ncdjango.interfaces.arcgis.views import MapServiceDetailView, IdentifyView, LayerListView, LayerDetailView
-from ncdjango.interfaces.arcgis_extended.views import GetImageView, LegendView
+from .views import GetImageView, LegendView
 
 
 urlpatterns = [

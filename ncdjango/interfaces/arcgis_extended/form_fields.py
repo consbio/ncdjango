@@ -1,9 +1,10 @@
 import json
-from trefoil.render.renderers import RasterRenderer
+
 from django import forms
 from django.core.exceptions import ValidationError
-import six
-from ncdjango.interfaces.arcgis_extended.utils import get_renderer_from_definition
+from trefoil.render.renderers import RasterRenderer
+
+from .utils import get_renderer_from_definition
 
 
 class StyleField(forms.Field):
@@ -14,8 +15,7 @@ class StyleField(forms.Field):
             return value
 
         try:
-            style_configurations = json.loads(value)
-            return {int(k): get_renderer_from_definition(v) for k, v in six.iteritems(style_configurations)}
+            return {int(k): get_renderer_from_definition(v) for k, v in json.loads(value).items()}
         except ValueError as e:
             raise ValidationError("Invalid renderer configuration: {}".format(e))
 

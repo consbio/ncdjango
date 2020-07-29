@@ -6,16 +6,15 @@ from datetime import timedelta
 from importlib import import_module
 
 import errno
-import six
 from celery.task import task
-from trefoil.render.renderers import RasterRenderer
 from django.conf import settings
 from django.core.exceptions import ImproperlyConfigured
 from django.db import transaction
 from django.utils.timezone import now
+from trefoil.render.renderers import RasterRenderer
 
-from ncdjango.geoprocessing.utils import get_task_instance, process_web_inputs, process_web_outputs, REGISTERED_JOBS
 from ncdjango.models import ProcessingJob, ProcessingResultService, SERVICE_DATA_ROOT
+from .utils import get_task_instance, process_web_inputs, process_web_outputs, REGISTERED_JOBS
 
 logger = logging.getLogger(__name__)
 
@@ -27,7 +26,7 @@ def run_job(self, job_name, inputs):
     job_info = REGISTERED_JOBS[job_name]
     results_renderer = job_info.get('results_renderer')
 
-    if isinstance(results_renderer, six.string_types):
+    if isinstance(results_renderer, str):
         try:
             module_name, class_name = results_renderer.rsplit('.', 1)
             module = import_module(module_name)
@@ -43,7 +42,7 @@ def run_job(self, job_name, inputs):
     publish_raster_results = job_info.get('publish_raster_results', False)
 
     job = ProcessingJob.objects.get(celery_id=self.request.id)
-    job.outputs=json.dumps(process_web_outputs(results, job, publish_raster_results, results_renderer))
+    job.outputs = json.dumps(process_web_outputs(results, job, publish_raster_results, results_renderer))
     job.save()
 
 
@@ -65,4 +64,3 @@ def cleanup_temporary_services():
         except OSError as e:
             if e.errno != errno.ENOTEMPTY:
                 logger.warn('Error deleting temporary service data: {}'.format(str(e)))
-

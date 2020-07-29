@@ -7,9 +7,9 @@ from celery.result import AsyncResult
 from django.conf import settings
 from django.core.exceptions import ValidationError
 from django.db import models
-from django.db.models.signals import post_delete
-from ncdjango.fields import BoundingBoxField, RasterRendererField
-from ncdjango.utils import auto_memoize
+
+from .fields import BoundingBoxField, RasterRendererField
+from .utils import auto_memoize
 
 logger = logging.getLogger(__name__)
 
@@ -187,7 +187,7 @@ def temporary_file_deleted(sender, instance, **kwargs):
             logger.exception("Error deleting temporary file: %s" % instance.file.name)
 
 
-post_delete.connect(temporary_file_deleted, sender=TemporaryFile)
+models.signals.post_delete.connect(temporary_file_deleted, sender=TemporaryFile)
 
 
 class ProcessingJob(models.Model):

@@ -2,7 +2,6 @@ from trefoil.render.renderers.classified import ClassifiedRenderer
 from trefoil.render.renderers.stretched import StretchedRenderer
 from trefoil.render.renderers.unique import UniqueValuesRenderer
 from trefoil.utilities.color import Color
-import six
 
 
 def get_renderer_from_definition(config):
@@ -26,7 +25,7 @@ def get_renderer_from_definition(config):
 
     if renderer_type == "stretched":
         color_space = options.get('color_space', 'hsv').lower().strip()
-        if not color_space in ('rgb', 'hsv'):
+        if color_space not in ('rgb', 'hsv'):
             raise ValueError("Invalid color space: {}".format(color_space))
 
         renderer = StretchedRenderer(colorspace=color_space, **renderer_kwargs)
@@ -34,7 +33,7 @@ def get_renderer_from_definition(config):
         renderer = ClassifiedRenderer(**renderer_kwargs)
     elif renderer_type == "unique":
         try:
-            labels = [six.text_type(x) for x in options.get('labels', [])]
+            labels = [str(x) for x in options.get('labels', [])]
         except TypeError:
             raise ValueError("Labels option must be an array")
 
@@ -74,7 +73,7 @@ def hex_to_color(value):
         if value[0] == '#':
             value = value[1:]
         if len(value) == 3:
-            value = ''.join([c*2 for c in value])
+            value = ''.join([c * 2 for c in value])
         if len(value) == 6:
             value = "{}ff".format(value)
         if len(value) != 8:
@@ -82,7 +81,7 @@ def hex_to_color(value):
 
         color = []
         for i in range(0, 8, 2):
-            color.append(int(value[i:i+2], 16))
+            color.append(int(value[i:i + 2], 16))
         return Color(*color)
 
     except ValueError:

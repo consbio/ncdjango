@@ -1,24 +1,24 @@
-import numpy
-from numpy import ma
-import six
+from functools import reduce
+
+from netCDF4 import Dataset
+from numpy import ndarray
+from numpy.ma import masked_array, masked_where
 from numpy.ma.core import is_masked
 from rasterio.dtypes import is_ndarray
 
+from ncdjango.geoprocessing import params
 from ncdjango.geoprocessing.data import Raster
 from ncdjango.geoprocessing.evaluation import Lexer, Parser
 from ncdjango.geoprocessing.exceptions import ExecutionError
-from ncdjango.geoprocessing.params import NdArrayParameter, StringParameter, RasterDatasetParameter, ListParameter, \
-    BooleanParameter
 from ncdjango.geoprocessing.workflow import Task
-from netCDF4 import Dataset
 
 
 class LoadRasterDataset(Task):
     """Loads a raster dataset from a NetCDF file."""
 
     name = 'raster:load_dataset'
-    inputs = [StringParameter('path', required=True)]
-    outputs = [RasterDatasetParameter('dataset_out')]
+    inputs = [params.StringParameter('path', required=True)]
+    outputs = [params.RasterDatasetParameter('dataset_out')]
 
     def execute(self, path):
         return Dataset(path, 'r')
@@ -28,8 +28,10 @@ class ArrayFromDataset(Task):
     """Reads a variable from a raster dataset into an array."""
 
     name = 'raster:array_from_dataset'
-    inputs = [RasterDatasetParameter('dataset', required=True), StringParameter('variable', required=True)]
-    outputs = [NdArrayParameter('array_out')]
+    inputs = [
+        params.RasterDatasetParameter('dataset', required=True), params.StringParameter('variable', required=True)
+    ]
+    outputs = [params.NdArrayParameter('array_out')]
 
     def execute(self, dataset, variable):
         return dataset[variable][:]
@@ -48,17 +50,17 @@ class ExpressionMixin(object):
         try:
             # Operations against masked arrays are really slow, so take a regular array view, then back to a masked
             # array afterwards. Todo: find a better solution long-term
-            expr_context = {k: v.view(numpy.ndarray) if is_masked(v) else v for k, v in six.iteritems(context)}
+            expr_context = {k: v.view(ndarray) if is_masked(v) else v for k, v in context.items()}
 
             result = Parser().evaluate(expression, context=expr_context)
 
             if is_ndarray(result):
-                for value in six.itervalues(context):
+                for value in context.values():
                     if is_masked(value):
                         if is_masked(result) and is_masked(value):
                             result.mask = result.mask | value.mask
                         elif is_masked(value):
-                            result = numpy.ma.masked_array(result, mask=value.mask)
+                            result = masked_array(result, mask=value.mask)
 
                         result = Raster(result, value.extent, value.x_dim, value.y_dim, value.y_increasing)
                         break
@@ -75,8 +77,8 @@ class ExpressionMixin(object):
 class SingleArrayExpressionBase(ExpressionMixin, Task):
     """Base class for tasks with a single array and expression as inputs."""
 
-    inputs = [NdArrayParameter('array_in', required=True), StringParameter('expression', required=True)]
-    outputs = [NdArrayParameter('array_out')]
+    inputs = [params.NdArrayParameter('array_in', required=True), params.StringParameter('expression', required=True)]
+    outputs = [params.NdArrayParameter('array_out')]
     allow_extra_args = True
 
     def get_context(self, arr, expr, context):
@@ -106,7 +108,7 @@ class MaskByExpression(SingleArrayExpressionBase):
 
         context = self.get_context(array_in, expression, kwargs)
         context.update(kwargs)
-        return ma.masked_where(self.evaluate_expression(expression, context), array_in)
+        return masked_where(self.evaluate_expression(expression, context), array_in)
 
 
 class ApplyExpression(SingleArrayExpressionBase):
@@ -127,11 +129,11 @@ class MapByExpression(SingleArrayExpressionBase):
 
     name = 'raster:map_by_expression'
     inputs = [
-        ListParameter(NdArrayParameter(''), 'arrays_in', required=True),
-        StringParameter('expression', required=True),
-        BooleanParameter('generator', required=False)
+        params.ListParameter(params.NdArrayParameter(''), 'arrays_in', required=True),
+        params.StringParameter('expression', required=True),
+        params.BooleanParameter('generator', required=False)
     ]
-    outputs = [ListParameter(NdArrayParameter(''), 'arrays_out')]
+    outputs = [params.ListParameter(params.NdArrayParameter(''), 'arrays_out')]
 
     def execute(self, arrays_in, expression, generator=False, **kwargs):
         result = (
@@ -147,11 +149,11 @@ class ReduceByExpression(ExpressionMixin, Task):
 
     name = 'raster:reduce_by_expression'
     inputs = [
-        ListParameter(NdArrayParameter(''), 'arrays_in', required=True),
-        StringParameter('expression', required=True),
-        NdArrayParameter('initial_array', required=False)
+        params.ListParameter(params.NdArrayParameter(''), 'arrays_in', required=True),
+        params.StringParameter('expression', required=True),
+        params.NdArrayParameter('initial_array', required=False)
     ]
-    outputs = [NdArrayParameter('array_out')]
+    outputs = [params.NdArrayParameter('array_out')]
     allow_extra_args = True
 
     def execute(self, arrays_in, expression, initial_array=None, **kwargs):
@@ -172,4 +174,4 @@ class ReduceByExpression(ExpressionMixin, Task):
         if initial_array is not None:
             args.append(initial_array)
 
-        return six.moves.reduce(*args)
+        return reduce(*args)
