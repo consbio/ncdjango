@@ -5,6 +5,7 @@ import shutil
 from tempfile import mkdtemp
 from zipfile import ZipFile
 
+from django.conf import settings
 from django.conf.urls import url
 from django.core.exceptions import ObjectDoesNotExist
 from django.core.files.base import File
@@ -87,7 +88,7 @@ class TemporaryFileResource(NcDjangoModelResource):
                 dataset_path = obj.file.name
             elif obj.extension == 'zip':
                 temp_dir = mkdtemp()
-                zf = ZipFile(obj.file.name)
+                zf = ZipFile(os.path.join(settings.BASE_DIR, obj.file.name))
 
                 try:
                     nc_name = None
