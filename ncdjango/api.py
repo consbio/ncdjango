@@ -14,6 +14,7 @@ from pyproj import Proj
 from tastypie import fields
 from tastypie.authentication import SessionAuthentication, MultiAuthentication, ApiKeyAuthentication
 from tastypie.authorization import DjangoAuthorization
+from tastypie.compat import NoReverseMatch
 from tastypie.exceptions import ImmediateHttpResponse, NotFound
 from tastypie.http import HttpBadRequest
 from tastypie.resources import ModelResource
@@ -29,7 +30,21 @@ from .models import TemporaryFile, Service, Variable, SERVICE_DATA_ROOT
 logger = logging.getLogger(__name__)
 
 
-class TemporaryFileResource(ModelResource):
+class NcDjangoModelResource(ModelResource):
+
+    def get_resource_uri(self, bundle_or_obj=None, url_name='ncdjango:api_dispatch_list'):
+        """ Overridden to prefix default url_name with 'tablo:' """
+
+        if bundle_or_obj is not None:
+            url_name = 'ncdjango:api_dispatch_detail'
+
+        try:
+            return self._build_reverse_url(url_name, kwargs=self.resource_uri_kwargs(bundle_or_obj))
+        except NoReverseMatch:
+            return ''
+
+
+class TemporaryFileResource(NcDjangoModelResource):
     uuid = fields.CharField(attribute='uuid', readonly=True)
 
     class Meta:
@@ -103,7 +118,7 @@ class TemporaryFileResource(ModelResource):
                 pass
 
 
-class ServiceResource(ModelResource):
+class ServiceResource(NcDjangoModelResource):
     data_path = fields.CharField(attribute='data_path', readonly=True)
     variables = fields.ToManyField(
         'ncdjango.api.VariableResource', attribute='variable_set', full=True, full_list=False, related_name='service',
@@ -204,7 +219,7 @@ class ServiceResource(ModelResource):
                 logger.warn('Could not delete file {}'.format(data_file))
 
 
-class VariableResource(ModelResource):
+class VariableResource(NcDjangoModelResource):
     service = fields.ToOneField(ServiceResource, attribute='service', full=False)
 
     class Meta:
