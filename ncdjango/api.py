@@ -34,7 +34,7 @@ logger = logging.getLogger(__name__)
 class NcDjangoModelResource(ModelResource):
 
     def get_resource_uri(self, bundle_or_obj=None, url_name='ncdjango:api_dispatch_list'):
-        """ Overridden to prefix default url_name with 'tablo:' """
+        """ Overridden to prefix default url_name with 'ncdjango:' """
 
         if bundle_or_obj is not None:
             url_name = 'ncdjango:api_dispatch_detail'
