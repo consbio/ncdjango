@@ -53,5 +53,5 @@ class ProcessingJobSerializer(serializers.ModelSerializer):
 
         return ProcessingJob.objects.create(
             job=validated_data['job'], celery_id=result.id, inputs=json.dumps(validated_data['inputs']),
-            user_ip=ip_address, user=request.user if request.user.is_authenticated() else None
+            user_ip=ip_address, user=request.user if request.user.is_authenticated else None
         )
