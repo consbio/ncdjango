@@ -12,6 +12,7 @@ from trefoil.netcdf.crs import set_crs
 from trefoil.netcdf.variable import SpatialCoordinateVariables
 from trefoil.render.renderers.stretched import StretchedRenderer
 from trefoil.utilities.color import Color
+from trefoil.utilities.proj import is_latlong
 
 from ncdjango.models import SERVICE_DATA_ROOT, Service, Variable, ProcessingResultService
 
@@ -94,7 +95,7 @@ def process_web_outputs(results, job, publish_raster_results=False, renderer_or_
             os.makedirs(os.path.dirname(abs_path))
 
             with Dataset(abs_path, 'w', format='NETCDF4') as ds:
-                if v.extent.projection.is_latlong():
+                if is_latlong(v.extent.projection):
                     x_var = 'longitude'
                     y_var = 'latitude'
                 else:

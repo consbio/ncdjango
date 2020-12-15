@@ -2,6 +2,7 @@ from PIL import Image
 from django.conf import settings
 import math
 import pyproj
+from trefoil.utilities.proj import is_latlong
 
 MAX_MESH_DEPTH = getattr(settings, 'NC_WARP_MAX_DEPTH', 5)
 PROJECTION_THRESHOLD = getattr(settings, 'NC_WARP_PROJECTION_THRESHOLD', 1.5)  # Warp tolerance in pixels
@@ -78,12 +79,12 @@ class GeoImage(object):
             )
         else:
             # Longitude coordinates at or across 180 swap from negative to positive, which throws off the mesh.
-            if self.bbox.projection.is_latlong() and source_quad[0] > source_quad[4]:
+            if is_latlong(self.bbox.projection) and source_quad[0] > source_quad[4]:
                 if target_rect_px[0] < (bounds[2]-bounds[0])/2.0 + bounds[0]:
                     source_quad[0] = -180.0 - (180-abs(source_quad[0]))
                 else:
                     source_quad[4] = 180.0 + (180-abs(source_quad[4]))
-            if self.bbox.projection.is_latlong() and source_quad[2] > source_quad[6]:
+            if is_latlong(self.bbox.projection) and source_quad[2] > source_quad[6]:
                 if target_rect_px[0] < (bounds[2]-bounds[0])/2.0 + bounds[0]:
                     source_quad[2] = -180.0 - (180-abs(source_quad[2]))
                 else:
