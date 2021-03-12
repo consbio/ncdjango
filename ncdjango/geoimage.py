@@ -2,6 +2,7 @@ from PIL import Image
 from django.conf import settings
 import math
 import pyproj
+from pyproj import Transformer
 from trefoil.utilities.proj import is_latlong
 
 MAX_MESH_DEPTH = getattr(settings, 'NC_WARP_MAX_DEPTH', 5)
@@ -15,7 +16,13 @@ class GeoImage(object):
         self.image = image
         self.bbox = bbox
 
-    def _get_mesh_piece(self, bounds, target_projection, to_target_world, to_target_image, to_source_image, depth=0):
+        self.target_to_world = None
+        self.target_to_image = None
+        self.source_to_image = None
+        self.source_to_target = None
+        self.target_to_source = None
+
+    def _get_mesh_piece(self, bounds, depth=0, prev_diff=None):
         target_rect_px = [
             int(math.ceil(bounds[0])),
             int(math.ceil(bounds[1])),
@@ -37,9 +44,7 @@ class GeoImage(object):
             (target_rect_px[2], target_rect_px[1])
         )
         for point in points:
-            source_quad.extend(pyproj.transform(
-                target_projection, self.bbox.projection, *to_target_world(*point)
-            ))
+            source_quad.extend(self.target_to_source.transform(*self.target_to_world(*point)))
 
         # Midpoint in target pixel space
         width = bounds[2] - bounds[0]
@@ -50,31 +55,33 @@ class GeoImage(object):
         width = source_quad[4] - source_quad[0]
         height = source_quad[5] - source_quad[1]
         source_midpoint = (source_quad[4] - width/2.0, source_quad[5] - height/2.0)
-        projected_midpoint = pyproj.transform(self.bbox.projection, target_projection, *source_midpoint)
-        projected_midpoint_px = to_target_image(*projected_midpoint)
+        projected_midpoint = self.source_to_target.transform(*source_midpoint)
+        projected_midpoint_px = self.target_to_image(*projected_midpoint)
 
         # Compare the "guessed" midpoint with actual, projected midpoint
         difference = math.sqrt(
             (projected_midpoint_px[0]-target_midpoint_px[0])**2 + (projected_midpoint_px[1]-target_midpoint_px[1])**2
         )
 
-        if difference > PROJECTION_THRESHOLD and depth < MAX_MESH_DEPTH:
+        sub_divide = (
+            difference > PROJECTION_THRESHOLD and
+            depth < MAX_MESH_DEPTH and
+            (prev_diff is None or prev_diff - difference > 1)
+        )
+
+        if sub_divide:
             return (
                 self._get_mesh_piece(
-                    (bounds[0], bounds[1], target_midpoint_px[0], target_midpoint_px[1]), target_projection,
-                    to_target_world, to_target_image, to_source_image, depth+1
+                    (bounds[0], bounds[1], target_midpoint_px[0], target_midpoint_px[1]), depth+1, difference
                 ) +
                 self._get_mesh_piece(
-                    (target_midpoint_px[0], bounds[1], bounds[2], target_midpoint_px[1]), target_projection,
-                    to_target_world, to_target_image, to_source_image, depth+1
+                    (target_midpoint_px[0], bounds[1], bounds[2], target_midpoint_px[1]), depth+1, difference
                 ) +
                 self._get_mesh_piece(
-                    (bounds[0], target_midpoint_px[1], target_midpoint_px[0], bounds[3]), target_projection,
-                    to_target_world, to_target_image, to_source_image, depth+1
+                    (bounds[0], target_midpoint_px[1], target_midpoint_px[0], bounds[3]), depth+1, difference
                 ) +
                 self._get_mesh_piece(
-                    (target_midpoint_px[0], target_midpoint_px[1], bounds[2], bounds[3]), target_projection,
-                    to_target_world, to_target_image, to_source_image, depth+1
+                    (target_midpoint_px[0], target_midpoint_px[1], bounds[2], bounds[3]), depth+1, difference
                 )
             )
         else:
@@ -93,20 +100,23 @@ class GeoImage(object):
             # Source px
             source_quad_px = []
             for k in range(0, 8, 2):
-                source_quad_px.extend(to_source_image(source_quad[k], source_quad[k+1]))
+                source_quad_px.extend(self.source_to_image(source_quad[k], source_quad[k+1]))
 
             return [(tuple(target_rect_px), tuple(source_quad_px))]
 
     def _create_mesh(self, target_bbox, target_size):
-        to_target_world = image_to_world(target_bbox, target_size)
-        to_target_image = world_to_image(target_bbox, target_size)
-        to_source_image = world_to_image(self.bbox, self.image.size)
+        self.source_to_target = Transformer.from_proj(self.bbox.projection, target_bbox.projection)
+        self.target_to_source = Transformer.from_proj(target_bbox.projection, self.bbox.projection)
+
+        self.target_to_world = image_to_world(target_bbox, target_size)
+        self.target_to_image = world_to_image(target_bbox, target_size)
+        self.source_to_image = world_to_image(self.bbox, self.image.size)
 
         source_bbox = self.bbox.project(target_bbox.projection)
 
         mesh_bounds = []
-        mesh_bounds.extend(to_target_image(source_bbox.xmin, source_bbox.ymax))
-        mesh_bounds.extend(to_target_image(source_bbox.xmax, source_bbox.ymin))
+        mesh_bounds.extend(self.target_to_image(source_bbox.xmin, source_bbox.ymax))
+        mesh_bounds.extend(self.target_to_image(source_bbox.xmax, source_bbox.ymin))
 
         mesh_bounds = [
             max(mesh_bounds[0], 0),
@@ -115,9 +125,7 @@ class GeoImage(object):
             min(mesh_bounds[3], target_size[1])
         ]
 
-        return self._get_mesh_piece(
-            mesh_bounds, target_bbox.projection, to_target_world, to_target_image, to_source_image
-        )
+        return self._get_mesh_piece(mesh_bounds)
 
     def warp(self, target_bbox, target_size=None):
         """Returns a copy of this image warped to a target size and bounding box"""
