@@ -1,4 +1,6 @@
 import numpy
+from numpy.ma import masked
+from numpy.ma.core import MaskedConstant
 from trefoil.geometry.bbox import BBox
 
 
@@ -33,6 +35,9 @@ class Raster(numpy.ma.MaskedArray):
 
     def __getitem__(self, items):
         arr = super(Raster, self).__getitem__(items)
+        if not isinstance(arr, numpy.ndarray) or isinstance(arr, MaskedConstant):
+            return arr
+
         Raster.__array_finalize__(arr, self)
 
         if self.extent is None or self.x_dim is None or self.y_dim is None:
@@ -87,6 +92,25 @@ class Raster(numpy.ma.MaskedArray):
         Raster.__array_finalize__(output, self)
 
         return output
+
+    def index(self, x, y):
+        """ Returns an array index for geographic coordinates """
+
+        if x < self.extent.xmin or x > self.extent.xmax:
+            return None
+
+        cell_size = self.extent.width / self.shape[self.x_dim], self.extent.height / self.shape[self.y_dim]
+        cell_index = [
+            int(float(x - self.extent.xmin) / cell_size[0]),
+            int(float(y - self.extent.ymin) / cell_size[1])
+        ]
+        if not self.y_increasing:
+            cell_index[1] = self.shape[self.y_dim] - cell_index[1] - 1
+
+        if self.x_dim == 0:
+            return cell_index[0], cell_index[1]
+        else:
+            return cell_index[1], cell_index[0]
 
     def __eq__(self, other):
         obj = super(Raster, self).__eq__(other)
