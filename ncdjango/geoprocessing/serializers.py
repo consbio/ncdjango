@@ -9,7 +9,7 @@ from .utils import REGISTERED_JOBS, get_task_instance
 
 class ProcessingJobSerializer(serializers.ModelSerializer):
     status = serializers.CharField(read_only=True)
-    inputs = serializers.JSONField(allow_null=True)
+    inputs = serializers.JSONField(allow_null=True, write_only=True)
     outputs = serializers.JSONField(read_only=True)
 
     class Meta:
