@@ -183,9 +183,8 @@ class Parser(object):
              | ADD factor
         """
 
-        p[0] = p[2]
         if p[1] == '-':
-            p[0] = Instruction('-x', context={'x': p[0]})
+            p[0] = Instruction('-x', context={'x': p[2]})
 
     def p_factor_number(self, p):
         """
@@ -237,7 +236,10 @@ class Parser(object):
 
         def resolve_id(key, context):
             try:
-                return context[key]
+                value = context[key]
+                if hasattr(value, '__call__'):
+                    return value()
+                return value
             except KeyError:
                 raise NameError("name '{}' is not defined".format(key))
 
@@ -573,7 +575,10 @@ class Parser(object):
         start = time.time()
         try:
             self.context = context
+            del context
+
             result = self.parser.parse(expr, lexer=self.lexer)
+            del self.context
 
             return result.execute() if isinstance(result, Instruction) else result
         finally:
@@ -596,4 +601,5 @@ class Instruction(object):
         try:
             return eval(self.compiled, None, context)
         finally:
-            context = None
+            del context
+            del self.locals
