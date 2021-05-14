@@ -1,11 +1,13 @@
-from bisect import bisect_left
-from datetime import datetime, timedelta
-from functools import wraps, partial
 import os
 import re
+from bisect import bisect_left
+from datetime import datetime, timedelta
+from functools import wraps
+
 import osgeo
 import pyproj
 from django.utils.timezone import utc
+from pyproj import Transformer
 from shapely.ops import transform
 
 EPSG_RE = re.compile(r'\+init=epsg:([0-9]+)')
@@ -14,7 +16,7 @@ PYPROJ_EPSG_FILE_RE = re.compile(r'<([0-9]+)([^<]+)<')
 
 def auto_memoize(func):
     """
-    Based on django.util.functional.memoize. Automatically memoizes instace methods for the lifespan of an object.
+    Based on django.util.functional.memoize. Automatically memoizes instance methods for the lifespan of an object.
     Only works with methods taking non-keword arguments. Note that the args to the function must be usable as
     dictionary keys. Also, the first argument MUST be self. This decorator will not work for functions or class
     methods, only object methods.
@@ -92,13 +94,9 @@ def proj4_to_wkt(projection):
 def project_geometry(geometry, source, target):
     """Projects a shapely geometry object from the source to the target projection."""
 
-    project = partial(
-        pyproj.transform,
-        source,
-        target
-    )
+    transformer = Transformer.from_proj(source, target)
 
-    return transform(project, geometry)
+    return transform(transformer.transform, geometry)
 
 
 def timestamp_to_date(timestamp):

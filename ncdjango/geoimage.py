@@ -1,7 +1,6 @@
 from PIL import Image
 from django.conf import settings
 import math
-import pyproj
 from pyproj import Transformer
 from trefoil.utilities.proj import is_latlong
 
