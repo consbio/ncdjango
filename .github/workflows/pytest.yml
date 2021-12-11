@@ -74,7 +74,7 @@ jobs:
         python -m pip install poetry
         poetry env use system
         poetry install
-        python -m pip install pytest
+        poetry run python -m pip install pytest
     - name: Test with pytest
       run: |
-        pytest
+        PYTHONPATH=`pwd` poetry run pytest
