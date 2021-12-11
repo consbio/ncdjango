@@ -1,0 +1,80 @@
+# This workflow will install Python dependencies and run tests
+# For more information see: https://help.github.com/actions/language-and-framework-guides/using-python-with-github-actions
+
+name: Run Tests
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  build:
+
+    runs-on: ubuntu-latest
+    env:
+      LD_LIBRARY_PATH: /usr/local/lib
+      C_INCLUDE_PATH: /usr/local/include
+      CPLUS_INCLUDE_PATH: /usr/local/include
+      
+    strategy:
+      matrix:
+        python-version: [3.6, 3.10]
+
+    steps:
+    - uses: actions/checkout@v2
+    - name: Set up Python ${{ matrix.python-version }}
+      uses: actions/setup-python@v2
+      with:
+        python-version: ${{ matrix.python-version }}
+        
+    - name: Create working directories
+      run: |
+        mkdir -p libs-hdf5 libs-netcdf
+    - name: Cache HDF5
+      id: cache-hdf5
+      uses: actions/cache@v2
+      with:
+        path: libs-hdf5
+        key: ${{ runner.os }}-hdf5-v3
+    - name: Build HDF5
+      if: steps.cache-hdf5.outputs.cache-hit != 'true'
+      run: |
+        wget https://support.hdfgroup.org/ftp/HDF5/releases/hdf5-1.12/hdf5-1.12.0/src/hdf5-1.12.0.tar.gz
+        tar -xf hdf5-1.12.0.tar.gz
+        cd hdf5-1.12.0 && ./configure --prefix=/usr/local && make
+      working-directory: libs-hdf5
+    - name: Install HDF5
+      run: |
+        cd hdf5-1.12.0 && sudo make install
+      working-directory: libs-hdf5
+    - name: Cache NetCDF
+      id: cache-netcdf
+      uses: actions/cache@v2
+      with:
+        path: libs-netcdf
+        key: ${{ runner.os }}-netcdf-v2
+    - name: Build NetCDF
+      if: steps.cache-netcdf.outputs.cache-hit != 'true'
+      run: |
+        wget https://www.unidata.ucar.edu/downloads/netcdf/ftp/netcdf-c-4.7.4.tar.gz
+        tar -xf netcdf-c-4.7.4.tar.gz
+        cd netcdf-c-4.7.4 && ./configure --prefix=/usr/local --disable-dap && make
+      working-directory: libs-netcdf
+    - name: Install NetCDF
+      run: |
+        cd netcdf-c-4.7.4 && sudo make install
+      working-directory: libs-netcdf
+        
+    - name: Install dependencies
+      run: |
+        sudo apt-get update && sudo apt-get install -y libgdal-dev libgeos-dev libproj-dev
+        python -m pip install --upgrade pip
+        python -m pip install poetry
+        poetry env use system
+        poetry install
+        python -m pip install pytest
+    - name: Test with pytest
+      run: |
+        pytest
