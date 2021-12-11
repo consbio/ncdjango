@@ -185,6 +185,8 @@ class Parser(object):
 
         if p[1] == '-':
             p[0] = Instruction('-x', context={'x': p[2]})
+        else:
+            p[0] = p[2]
 
     def p_factor_number(self, p):
         """
