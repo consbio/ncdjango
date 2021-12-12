@@ -561,7 +561,7 @@ python-versions = "*"
 
 [[package]]
 name = "rasterio"
-version = "1.3a2"
+version = "1.2.10"
 description = "Fast and direct raster I/O for use with Numpy and SciPy"
 category = "main"
 optional = false
@@ -578,7 +578,7 @@ numpy = "*"
 snuggs = ">=1.4.1"
 
 [package.extras]
-all = ["sphinx-rtd-theme", "pytest-cov (>=2.2.0)", "numpydoc", "hypothesis", "sphinx", "ghp-import", "packaging", "ipython (>=2.0)", "matplotlib", "pytest (>=2.8.2)", "shapely", "boto3 (>=1.2.4)"]
+all = ["numpydoc", "hypothesis", "matplotlib", "pytest-cov (>=2.2.0)", "sphinx", "ipython (>=2.0)", "boto3 (>=1.2.4)", "shapely", "pytest (>=2.8.2)", "packaging", "sphinx-rtd-theme", "ghp-import"]
 docs = ["ghp-import", "numpydoc", "sphinx", "sphinx-rtd-theme"]
 ipython = ["ipython (>=2.0)"]
 plot = ["matplotlib"]
@@ -658,11 +658,10 @@ python-versions = ">=2.6, !=3.0.*, !=3.1.*, !=3.2.*"
 [[package]]
 name = "trefoil"
 version = "0.3.2"
-description = ""
+description = "Useful tools for spatial analysis using numpy and NetCDF"
 category = "main"
 optional = false
 python-versions = "*"
-develop = false
 
 [package.dependencies]
 affine = ">=1.0"
@@ -677,12 +676,6 @@ pyproj = "*"
 pytz = "*"
 rasterio = ">=1.0a12"
 six = "*"
-
-[package.source]
-type = "git"
-url = "https://github.com/consbio/trefoil.git"
-reference = "main"
-resolved_reference = "f8da46fa67240cc3f1ef0460e3a249e57e5f7224"
 
 [[package]]
 name = "typing-extensions"
@@ -736,7 +729,7 @@ testing = ["pytest (>=4.6)", "pytest-checkdocs (>=2.4)", "pytest-flake8", "pytes
 [metadata]
 lock-version = "1.1"
 python-versions = "^3.6"
-content-hash = "4384ab2afd0c312802f1aecece373bdd92b6e864c8d1cb0fcdcfca354b3429d9"
+content-hash = "0c492b4de842d6ffe185e845fea02cac9b1ccf3451e4960e6374308b0dffd09f"
 
 [metadata.files]
 affine = [
@@ -1088,15 +1081,15 @@ pytz = [
     {file = "pytz-2021.3.tar.gz", hash = "sha256:acad2d8b20a1af07d4e4c9d2e9285c5ed9104354062f275f3fcd88dcef4f1326"},
 ]
 rasterio = [
-    {file = "rasterio-1.3a2-cp36-cp36m-macosx_10_9_x86_64.whl", hash = "sha256:f68acab07a71f4f56589d5a9f0e3e7b81b11346da0edfb4065ae1e08b3086745"},
-    {file = "rasterio-1.3a2-cp36-cp36m-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:eaed88ff35d155ef7a1a77c4bf393d5b5ece272bfc7463fc258fd7ae8f2d8689"},
-    {file = "rasterio-1.3a2-cp37-cp37m-macosx_10_9_x86_64.whl", hash = "sha256:cd42bf3218f7f8f15b375b58732ff708be506d34a7769aad2da3be881ce47049"},
-    {file = "rasterio-1.3a2-cp37-cp37m-manylinux2014_x86_64.whl", hash = "sha256:159230ce12259ada1d1cc9e89866faf1df1e51486408ca1530c97148187a4e25"},
-    {file = "rasterio-1.3a2-cp38-cp38-macosx_10_9_x86_64.whl", hash = "sha256:4e1b11322900ef3de7e51d559b70d3ef082973158225d3db0e54ac040ee826cd"},
-    {file = "rasterio-1.3a2-cp38-cp38-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:d09d6fb63dcbd938ad1a7c752ffd91d9491e093b1f274948d1b8ce332b525e1f"},
-    {file = "rasterio-1.3a2-cp39-cp39-macosx_10_9_x86_64.whl", hash = "sha256:fb6b101e93876da61ce60316776dddcee82f60fd5444bbc1171b4f3aa059b99f"},
-    {file = "rasterio-1.3a2-cp39-cp39-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:86183755caa5e06e6f0f979daeb8c354c9911f7daf27cbb7017ef1e8159557c5"},
-    {file = "rasterio-1.3a2.tar.gz", hash = "sha256:8e395028189f775dd009700b4fb3d378b97f5fb8530a654037cf81008d0fb46e"},
+    {file = "rasterio-1.2.10-cp36-cp36m-macosx_10_9_x86_64.whl", hash = "sha256:f86efb0e4989201f244d6818575d442b716ce81af6cd969c3caead76b9690837"},
+    {file = "rasterio-1.2.10-cp36-cp36m-manylinux_2_5_x86_64.manylinux1_x86_64.whl", hash = "sha256:831b6dbefb409c3ece23fa219d8446a7534e30c69a075fd366e72742b1f94c58"},
+    {file = "rasterio-1.2.10-cp37-cp37m-macosx_10_9_x86_64.whl", hash = "sha256:42a1a6364313c384fcd631d850792621301e930449b47f72ced048c415c9c84e"},
+    {file = "rasterio-1.2.10-cp37-cp37m-manylinux1_x86_64.whl", hash = "sha256:1572003273225162933d4c88729076ac39050e7becd9de7d31988d1dd40942c1"},
+    {file = "rasterio-1.2.10-cp38-cp38-macosx_10_9_x86_64.whl", hash = "sha256:8f9867a3b6663396260fc5bdfbea372cac9202074b709478db741767f40dfffc"},
+    {file = "rasterio-1.2.10-cp38-cp38-manylinux_2_5_x86_64.manylinux1_x86_64.whl", hash = "sha256:ba95aa3221814e364ef49cf8dd8ca4a73e2ea702bd9228a3a845e197091792ae"},
+    {file = "rasterio-1.2.10-cp39-cp39-macosx_10_9_x86_64.whl", hash = "sha256:2394ce0ae1e7b49b456ddc6bbf00ce6840656e926046c1a5a54cd0f66ea67dc4"},
+    {file = "rasterio-1.2.10-cp39-cp39-manylinux_2_5_x86_64.manylinux1_x86_64.whl", hash = "sha256:c73248b4ba0564798bf64df869834821a7b823a4c9ceda3de9b772d69c3f5405"},
+    {file = "rasterio-1.2.10.tar.gz", hash = "sha256:6062456047ba6494fe18bd0da98a383b6fad5306b16cd52a22e76c59172a2b5f"},
 ]
 requests = [
     {file = "requests-2.26.0-py2.py3-none-any.whl", hash = "sha256:6c1246513ecd5ecd4528a0906f910e8f0f9c6b8ec72030dc9fd154dc1a6efd24"},
@@ -1141,7 +1134,10 @@ toml = [
     {file = "toml-0.10.2-py2.py3-none-any.whl", hash = "sha256:806143ae5bfb6a3c6e736a764057db0e6a0e05e338b5630894a5f779cabb4f9b"},
     {file = "toml-0.10.2.tar.gz", hash = "sha256:b3bda1d108d5dd99f4a20d24d9c348e91c4db7ab1b749200bded2f839ccbe68f"},
 ]
-trefoil = []
+trefoil = [
+    {file = "trefoil-0.3.2-py2.py3-none-any.whl", hash = "sha256:8a009d5b473559c6d6385fa8752a54675d1fe9194b13501fe6d0c98d6cb60afe"},
+    {file = "trefoil-0.3.2.tar.gz", hash = "sha256:db4d484cb7d425400459d9157aaac7c696deaa8a00194a168bf992d9d3b7e5ca"},
+]
 typing-extensions = [
     {file = "typing_extensions-4.0.1-py3-none-any.whl", hash = "sha256:7f001e5ac290a0c0401508864c7ec868be4e701886d5b573a9528ed3973d9d3b"},
     {file = "typing_extensions-4.0.1.tar.gz", hash = "sha256:4ca091dea149f945ec56afb48dae714f21e8692ef22a395223bcd328961b6a0e"},
