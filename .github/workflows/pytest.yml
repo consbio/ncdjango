@@ -77,6 +77,7 @@ jobs:
         python -m pip install poetry
         poetry env use system
         poetry run pip install --force "setuptools<58"
+        poetry run pip install git+https://github.com/consbio/trefoil.git
         poetry install
         poetry run pip install gdal==`gdal-config --version`
         poetry run python -m pip install pytest
