@@ -20,7 +20,7 @@ jobs:
       
     strategy:
       matrix:
-        python-version: [3.6, "3.10"]
+        python-version: [3.6, 3.9]
 
     steps:
     - uses: actions/checkout@v2
@@ -69,11 +69,16 @@ jobs:
         
     - name: Install dependencies
       run: |
-        sudo apt-get update && sudo apt-get install -y libgdal-dev libgeos-dev libproj-dev
+        sudo apt-get update && \
+          DEBIAN_FRONTEND=noninteractive sudo apt-get install -y --no-install-recommends \
+          libgeos-dev libproj-dev libgdal-dev
+
         python -m pip install --upgrade pip
         python -m pip install poetry
         poetry env use system
+        poetry run pip install --force "setuptools<58"
         poetry install
+        poetry run pip install gdal==`gdal-config --version`
         poetry run python -m pip install pytest
     - name: Test with pytest
       run: |
