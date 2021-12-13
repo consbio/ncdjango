@@ -1,4 +1,4 @@
-# ncdjango 1.2.0
+# ncdjango 1.2.3
 
 [![Build Status](https://travis-ci.org/consbio/ncdjango.png?branch=main)](https://travis-ci.org/consbio/ncdjango)
 [![Coverage Status](https://coveralls.io/repos/github/consbio/ncdjango/badge.svg?branch=main)](https://coveralls.io/github/consbio/ncdjango?branch=main)
