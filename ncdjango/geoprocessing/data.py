@@ -198,7 +198,7 @@ class Raster(numpy.ma.MaskedArray):
         return obj
 
     def __rpow__(self, other):
-        obj = super(Raster, self).__pow__(other)
+        obj = super(Raster, self).__rpow__(other).view(type=Raster)
         Raster.__array_finalize__(obj, self)
         return obj
 
