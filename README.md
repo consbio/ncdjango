@@ -1,4 +1,4 @@
-# ncdjango 1.2.3
+# ncdjango
 
 Ncdjango turns [Django](https://www.djangoproject.com/) projects into map servers backed by
 [NetCDF](http://www.unidata.ucar.edu/software/netcdf/docs/faq.html#whatisit) datasets. It can be added Django project
