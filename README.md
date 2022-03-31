@@ -1,8 +1,5 @@
 # ncdjango 1.2.3
 
-[![Build Status](https://travis-ci.org/consbio/ncdjango.png?branch=main)](https://travis-ci.org/consbio/ncdjango)
-[![Coverage Status](https://coveralls.io/repos/github/consbio/ncdjango/badge.svg?branch=main)](https://coveralls.io/github/consbio/ncdjango?branch=main)
-
 Ncdjango turns [Django](https://www.djangoproject.com/) projects into map servers backed by
 [NetCDF](http://www.unidata.ucar.edu/software/netcdf/docs/faq.html#whatisit) datasets. It can be added Django project
 to provide various web interfaces to NetCDF data and geoprocessing tools written in Python which operate on NetCDF data.
