@@ -6,7 +6,8 @@ from datetime import timedelta
 from importlib import import_module
 
 import errno
-from celery.task import task
+
+from celery import shared_task
 from django.conf import settings
 from django.core.exceptions import ImproperlyConfigured
 from django.db import transaction
@@ -21,7 +22,7 @@ logger = logging.getLogger(__name__)
 MAX_TEMPORARY_SERVICE_AGE = getattr(settings, 'NC_MAX_TEMPORARY_SERVICE_AGE', 43200)  # 12 hours
 
 
-@task(bind=True)
+@shared_task(bind=True)
 def run_job(self, job_name, inputs):
     job_info = REGISTERED_JOBS[job_name]
     results_renderer = job_info.get('results_renderer')
