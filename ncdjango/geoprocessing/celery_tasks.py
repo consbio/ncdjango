@@ -47,7 +47,7 @@ def run_job(self, job_name, inputs):
     job.save()
 
 
-@task
+@shared_task
 def cleanup_temporary_services():
     cutoff = now() - timedelta(seconds=MAX_TEMPORARY_SERVICE_AGE)
     services = ProcessingResultService.objects.filter(is_temporary=True, created__lt=cutoff)
