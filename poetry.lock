@@ -663,11 +663,10 @@ python-versions = ">=3.7"
 [[package]]
 name = "trefoil"
 version = "0.3.2"
-description = ""
+description = "Useful tools for spatial analysis using numpy and NetCDF"
 category = "main"
 optional = false
 python-versions = "*"
-develop = false
 
 [package.dependencies]
 affine = ">=1.0"
@@ -682,12 +681,6 @@ pyproj = "*"
 pytz = "*"
 rasterio = ">=1.0a12"
 six = "*"
-
-[package.source]
-type = "git"
-url = "https://github.com/consbio/trefoil.git"
-reference = "main"
-resolved_reference = "f8da46fa67240cc3f1ef0460e3a249e57e5f7224"
 
 [[package]]
 name = "typing-extensions"
@@ -741,7 +734,7 @@ testing = ["pytest (>=6)", "pytest-checkdocs (>=2.4)", "pytest-flake8", "pytest-
 [metadata]
 lock-version = "1.1"
 python-versions = ">=3.7,<3.11"
-content-hash = "26d23d8f6a8671eab3ef5e92906817496066ae1663fda714534f262710a18c13"
+content-hash = "b59f7dfd94587ef43a9edcd7cc222fa4475d23258bfbac56eef98339fe2befa0"
 
 [metadata.files]
 affine = [
@@ -1159,7 +1152,10 @@ tomli = [
     {file = "tomli-2.0.1-py3-none-any.whl", hash = "sha256:939de3e7a6161af0c887ef91b7d41a53e7c5a1ca976325f429cb46ea9bc30ecc"},
     {file = "tomli-2.0.1.tar.gz", hash = "sha256:de526c12914f0c550d15924c62d72abc48d6fe7364aa87328337a31007fe8a4f"},
 ]
-trefoil = []
+trefoil = [
+    {file = "trefoil-0.3.2-py2.py3-none-any.whl", hash = "sha256:8a009d5b473559c6d6385fa8752a54675d1fe9194b13501fe6d0c98d6cb60afe"},
+    {file = "trefoil-0.3.2.tar.gz", hash = "sha256:db4d484cb7d425400459d9157aaac7c696deaa8a00194a168bf992d9d3b7e5ca"},
+]
 typing-extensions = [
     {file = "typing_extensions-4.1.1-py3-none-any.whl", hash = "sha256:21c85e0fe4b9a155d0799430b0ad741cdce7e359660ccbd8b530613e8df88ce2"},
     {file = "typing_extensions-4.1.1.tar.gz", hash = "sha256:1a9462dcc3347a79b1f1c0271fbe79e844580bb598bafa1ed208b94da3cdcd42"},
