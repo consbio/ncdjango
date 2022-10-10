@@ -14,7 +14,7 @@ import pyproj
 class BoundingBoxField(models.TextField):
     description = _('Bounding box with associated projection information')
 
-    def from_db_value(self, value, expression, connection, context):
+    def from_db_value(self, value, expression, connection, context=None):
         return self.to_python(value)
 
     def to_python(self, value):
@@ -47,7 +47,7 @@ class BoundingBoxField(models.TextField):
 class RasterRendererField(models.TextField):
     description = _('A class to generate images from raster data')
 
-    def from_db_value(self, value, expression, connection, context):
+    def from_db_value(self, value, expression, connection, context=None):
         return self.to_python(value)
 
     def to_python(self, value):
