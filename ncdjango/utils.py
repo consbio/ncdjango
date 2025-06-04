@@ -1,17 +1,16 @@
 import os
 import re
 from bisect import bisect_left
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from functools import wraps
 
 import osgeo
 import pyproj
-from django.utils.timezone import utc
 from pyproj import Transformer
 from shapely.ops import transform
 
-EPSG_RE = re.compile(r'\+init=epsg:([0-9]+)')
-PYPROJ_EPSG_FILE_RE = re.compile(r'<([0-9]+)([^<]+)<')
+EPSG_RE = re.compile(r"\+init=epsg:([0-9]+)")
+PYPROJ_EPSG_FILE_RE = re.compile(r"<([0-9]+)([^<]+)<")
 
 
 def auto_memoize(func):
@@ -25,11 +24,12 @@ def auto_memoize(func):
     @wraps(func)
     def wrapper(*args):
         inst = args[0]
-        inst._memoized_values = getattr(inst, '_memoized_values', {})
+        inst._memoized_values = getattr(inst, "_memoized_values", {})
         key = (func, args[1:])
         if key not in inst._memoized_values:
             inst._memoized_values[key] = func(*args)
         return inst._memoized_values[key]
+
     return wrapper
 
 
@@ -41,17 +41,17 @@ def best_fit(li, value):
     if index in (0, len(li)):
         return index
 
-    if li[index] - value < value - li[index-1]:
+    if li[index] - value < value - li[index - 1]:
         return index
     else:
-        return index-1
+        return index - 1
 
 
 def proj4_to_epsg(projection):
     """Attempts to convert a PROJ4 projection object to an EPSG code and returns None if conversion fails"""
 
     def make_definition(value):
-        return {x.strip().lower() for x in value.split('+') if x}
+        return {x.strip().lower() for x in value.split("+") if x}
 
     # Use the EPSG in the definition if available
     match = EPSG_RE.search(projection.srs)
@@ -59,11 +59,11 @@ def proj4_to_epsg(projection):
         return int(match.group(1))
 
     # Otherwise, try to look up the EPSG from the pyproj data file
-    pyproj_data_dir = os.path.join(os.path.dirname(pyproj.__file__), 'data')
-    pyproj_epsg_file = os.path.join(pyproj_data_dir, 'epsg')
+    pyproj_data_dir = os.path.join(os.path.dirname(pyproj.__file__), "data")
+    pyproj_epsg_file = os.path.join(pyproj_data_dir, "epsg")
     if os.path.exists(pyproj_epsg_file):
         definition = make_definition(projection.srs)
-        f = open(pyproj_epsg_file, 'r')
+        f = open(pyproj_epsg_file, "r")
         for line in f.readlines():
             match = PYPROJ_EPSG_FILE_RE.search(line)
             if match:
@@ -100,8 +100,14 @@ def project_geometry(geometry, source, target):
 
 
 def timestamp_to_date(timestamp):
-    return datetime.utcfromtimestamp(0).replace(tzinfo=utc) + timedelta(seconds=timestamp)
+    return datetime.utcfromtimestamp(0).replace(tzinfo=timezone.utc) + timedelta(
+        seconds=timestamp
+    )
 
 
 def date_to_timestamp(date_obj):
-    return int((date_obj - datetime.utcfromtimestamp(0).replace(tzinfo=utc)).total_seconds())
+    return int(
+        (
+            date_obj - datetime.utcfromtimestamp(0).replace(tzinfo=timezone.utc)
+        ).total_seconds()
+    )
