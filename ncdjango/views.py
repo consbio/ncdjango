@@ -85,9 +85,10 @@ class NetCdfDatasetMixin(object):
         return self.dataset
 
     def close_dataset(self):
-        if self.dataset:
+        if self.dataset and self.dataset.isopen():
             self.dataset.close()
-            self.dataset = None
+        
+        self.dataset = None
 
     def get_grid_for_variable(self, variable, time_index=None, x_slice=None, y_slice=None):
         data = self.open_dataset(self.service).variables[variable.variable]
