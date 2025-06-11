@@ -17,17 +17,13 @@ jobs:
       LD_LIBRARY_PATH: /usr/local/lib
       C_INCLUDE_PATH: /usr/local/include
       CPLUS_INCLUDE_PATH: /usr/local/include
-      
-    strategy:
-      matrix:
-        python-version: ['3.10', '3.11']
 
     steps:
     - uses: actions/checkout@v2
-    - name: Set up Python ${{ matrix.python-version }}
+    - name: Set up Python 3.10
       uses: actions/setup-python@v2
       with:
-        python-version: ${{ matrix.python-version }}
+        python-version: 3.10
         
     - name: Create working directories
       run: |
