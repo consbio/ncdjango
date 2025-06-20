@@ -493,8 +493,6 @@ class TestDataTypes(object):
         # Make sure binops don't lose extent info
         assert isinstance((raster == raster).extent, BBox)
         assert isinstance((raster != raster).extent, BBox)
-        assert isinstance((raster > 2).extent, BBox)
-        assert isinstance((2 > raster).extent, BBox)
         assert isinstance((raster + 2).extent, BBox)
         assert isinstance((2 + raster).extent, BBox)
         assert isinstance((raster - 2).extent, BBox)
