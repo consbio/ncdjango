@@ -1223,10 +1223,10 @@ files = [
 
 [[package]]
 name = "trefoil"
-version = "0.1.0"
-description = ""
+version = "0.3.2"
+description = "Useful tools for spatial analysis using numpy and NetCDF"
 optional = false
-python-versions = ">=3.10,<3.11"
+python-versions = "*"
 files = []
 develop = false
 
@@ -1235,19 +1235,20 @@ affine = ">=1.0"
 click = "*"
 fiona = ">=1.6.0"
 jinja2 = "*"
-netcdf4 = ">=1.1.1"
-numpy = "*"
+netCDF4 = ">=1.1.1"
+Numpy = "*"
 palettable = "*"
-pillow = "^9.0.1"
+Pillow = ">=2.9.0"
 pyproj = "*"
 pytz = "*"
-rasterio = "^1.4.3"
+rasterio = ">=1.0a12"
+six = "*"
 
 [package.source]
 type = "git"
 url = "https://github.com/consbio/trefoil.git"
-reference = "update-rasterio"
-resolved_reference = "3c3ffa71620ec4c50f04b2439223bcdc24d7ddbb"
+reference = "main"
+resolved_reference = "f8da46fa67240cc3f1ef0460e3a249e57e5f7224"
 
 [[package]]
 name = "typing-extensions"
@@ -1313,4 +1314,4 @@ files = [
 [metadata]
 lock-version = "2.0"
 python-versions = ">=3.10,<3.11"
-content-hash = "ba8605645f609b81b44bfee213384022327a09c0cb6679a67dd6945252d15869"
+content-hash = "26e8a01a18c8e8e88a2b8070f191e5089ba1a956bb6bba672ccd8dc6c2356d09"
