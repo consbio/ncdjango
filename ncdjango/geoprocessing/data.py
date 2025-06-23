@@ -252,6 +252,26 @@ class Raster(numpy.ma.MaskedArray):
         Raster.__array_finalize__(obj, self)
         return obj
 
+    def __lt__(self, other):
+        obj = super(Raster, self).__lt__(other)
+        Raster.__array_finalize__(obj, self)
+        return obj
+
+    def __le__(self, other):
+        obj = super(Raster, self).__lt__(other)
+        Raster.__array_finalize__(obj, self)
+        return obj
+
+    def __gt__(self, other):
+        obj = super(Raster, self).__lt__(other)
+        Raster.__array_finalize__(obj, self)
+        return obj
+
+    def __ge__(self, other):
+        obj = super(Raster, self).__lt__(other)
+        Raster.__array_finalize__(obj, self)
+        return obj
+
 
 def is_raster(arr):
     """Determine whether the array is a `Raster`"""
