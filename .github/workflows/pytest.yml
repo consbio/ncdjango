@@ -17,24 +17,20 @@ jobs:
       LD_LIBRARY_PATH: /usr/local/lib
       C_INCLUDE_PATH: /usr/local/include
       CPLUS_INCLUDE_PATH: /usr/local/include
-      
-    strategy:
-      matrix:
-        python-version: [3.7, 3.9]
 
     steps:
     - uses: actions/checkout@v2
-    - name: Set up Python ${{ matrix.python-version }}
+    - name: Set up Python 3.10
       uses: actions/setup-python@v2
       with:
-        python-version: ${{ matrix.python-version }}
+        python-version: "3.10"
         
     - name: Create working directories
       run: |
         mkdir -p libs-hdf5 libs-netcdf
     - name: Cache HDF5
       id: cache-hdf5
-      uses: actions/cache@v2
+      uses: actions/cache@v3
       with:
         path: libs-hdf5
         key: ${{ runner.os }}-hdf5-v3
@@ -51,7 +47,7 @@ jobs:
       working-directory: libs-hdf5
     - name: Cache NetCDF
       id: cache-netcdf
-      uses: actions/cache@v2
+      uses: actions/cache@v3
       with:
         path: libs-netcdf
         key: ${{ runner.os }}-netcdf-v2
