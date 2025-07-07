@@ -258,17 +258,17 @@ class Raster(numpy.ma.MaskedArray):
         return obj
 
     def __le__(self, other):
-        obj = super(Raster, self).__lt__(other)
+        obj = super(Raster, self).__le__(other)
         Raster.__array_finalize__(obj, self)
         return obj
 
     def __gt__(self, other):
-        obj = super(Raster, self).__lt__(other)
+        obj = super(Raster, self).__gt__(other)
         Raster.__array_finalize__(obj, self)
         return obj
 
     def __ge__(self, other):
-        obj = super(Raster, self).__lt__(other)
+        obj = super(Raster, self).__ge__(other)
         Raster.__array_finalize__(obj, self)
         return obj
 
