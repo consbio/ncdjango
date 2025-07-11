@@ -102,11 +102,11 @@ def process_web_outputs(results, job, publish_raster_results=False, renderer_or_
                     x_var = 'x'
                     y_var = 'y'
 
-                coord_vars = SpatialCoordinateVariables.from_bbox(v.extent, *reversed(v.shape))
+                coord_vars = SpatialCoordinateVariables.from_bbox(v.extent, *reversed(v.shape), y_ascending=v.y_increasing)
                 coord_vars.add_to_dataset(ds, x_var, y_var)
 
                 fill_value = v.fill_value if numpy.ma.core.is_masked(v) else None
-                data_var = ds.createVariable('data', v.dtype, dimensions=(y_var, x_var), fill_value=fill_value)
+                data_var = ds.createVariable('data', v.dtype, dimensions=(y_var, x_var), fill_value=fill_value, compression='zlib')
                 data_var[:] = v
                 set_crs(ds, 'data', v.extent.projection)
 
