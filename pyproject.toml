@@ -25,7 +25,7 @@ netCDF4 = ">=1.5.3"
 numpy = "^1.24"
 pyproj = "*"
 Fiona = "*"
-trefoil = { git = "https://github.com/consbio/trefoil.git", branch = "update-rasterio" }
+trefoil = "0.4.0"
 rasterio = "*"
 ply = "*"
 celery = "^5.2.3"
