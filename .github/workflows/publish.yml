@@ -28,7 +28,7 @@ jobs:
         mkdir -p libs-hdf5 libs-netcdf
     - name: Cache HDF5
       id: cache-hdf5
-      uses: actions/cache@v2
+      uses: actions/cache@v4
       with:
         path: libs-hdf5
         key: ${{ runner.os }}-hdf5-v3
@@ -45,7 +45,7 @@ jobs:
       working-directory: libs-hdf5
     - name: Cache NetCDF
       id: cache-netcdf
-      uses: actions/cache@v2
+      uses: actions/cache@v4
       with:
         path: libs-netcdf
         key: ${{ runner.os }}-netcdf-v2
