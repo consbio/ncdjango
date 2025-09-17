@@ -1301,14 +1301,14 @@ files = [
 
 [[package]]
 name = "trefoil"
-version = "0.4.0"
+version = "0.4.1"
 description = "Geospatial operations with NetCDF files and numpy arrays."
 optional = false
 python-versions = "<3.12,>=3.9"
 groups = ["main"]
 files = [
-    {file = "trefoil-0.4.0-py3-none-any.whl", hash = "sha256:cecedf8746911ee5efc48838c572c5dbfa5c5ec0349b0e1016cebb2b0d3bcd1d"},
-    {file = "trefoil-0.4.0.tar.gz", hash = "sha256:19eca8984eabb1d126bb3b8aa2c3432c2ebe6d3c4fec5bf3d5b48e4456c5d227"},
+    {file = "trefoil-0.4.1-py3-none-any.whl", hash = "sha256:ed3ff9be4aa2f37bd71888cb49b63d062a50c8c6c955572430cf0438f4a0d909"},
+    {file = "trefoil-0.4.1.tar.gz", hash = "sha256:ced50d6d30469939bdd9a0e4684ec140da234d9ac3ca9dc1352ce2985e847154"},
 ]
 
 [package.dependencies]
@@ -1319,7 +1319,7 @@ jinja2 = "*"
 netcdf4 = ">=1.1.1"
 numpy = "*"
 palettable = "*"
-pillow = ">=9.0.1,<10.0.0"
+pillow = ">=9.0.1,<11.0.0"
 pyproj = "*"
 pytz = "*"
 rasterio = ">=1.4.3,<2.0.0"
@@ -1395,4 +1395,4 @@ files = [
 [metadata]
 lock-version = "2.1"
 python-versions = ">=3.10,<3.12"
-content-hash = "b76e72dd0fd2bfa767b533b2e8aa0796337a6b6eb888c678809d7abb9df416f2"
+content-hash = "4e43c1c46685d90f12742046425672afd6170a4d57438fe7ed4535ce6410464d"
