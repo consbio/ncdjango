@@ -419,13 +419,13 @@ bcrypt = ["bcrypt"]
 
 [[package]]
 name = "django-tastypie"
-version = "0.14.7"
+version = "0.15.1"
 description = "A flexible & capable API layer for Django."
 optional = false
 python-versions = "*"
 groups = ["main"]
 files = [
-    {file = "django-tastypie-0.14.7.tar.gz", hash = "sha256:5769e997d66726babb0cbb7643ff278b994b8ca775c5a4c510dfa0f386567d50"},
+    {file = "django_tastypie-0.15.1.tar.gz", hash = "sha256:1eb41318b08c0ebc9b8a386871b45401a623e6a5566bf32ae3e17be2c59318b7"},
 ]
 
 [package.dependencies]
@@ -1369,4 +1369,4 @@ files = [
 [metadata]
 lock-version = "2.1"
 python-versions = ">=3.11,<3.12"
-content-hash = "8c4a4cd26d2945a7e62814afbd14b79885ee455278105806ce08d7246a4c4637"
+content-hash = "fe1c7b904ac1e58410ca7089c7b59d80fc920bbd52df2c0572af9a6d431aa0b4"
