@@ -230,7 +230,7 @@ class ServiceResource(NcDjangoModelResource):
                 fp,
             )
 
-            bundle.obj.data_path = name[: -(len(base_filename) + 4)]
+            bundle.obj.data_path = name
             bundle.obj.save()
             tmp_file.delete()
 
@@ -249,9 +249,7 @@ class ServiceResource(NcDjangoModelResource):
                     "A model instance matching the provided arguments could not be found."
                 )
 
-        data_file = os.path.join(
-            settings.MEDIA_ROOT, SERVICE_DATA_ROOT, bundle.obj.data_path
-        )
+        data_file = os.path.join(settings.MEDIA_ROOT, bundle.obj.data_path)
 
         with atomic():
             super(ServiceResource, self).obj_delete(bundle, **kwargs)

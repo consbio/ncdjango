@@ -56,9 +56,7 @@ def cleanup_temporary_services():
     with transaction.atomic():
         for service in services:
             files_to_delete.append(
-                os.path.join(
-                    settings.MEDIA_ROOT, SERVICE_DATA_ROOT, service.service.data_path
-                )
+                os.path.join(settings.MEDIA_ROOT, service.service.data_path)
             )
             service.service.delete()
 
