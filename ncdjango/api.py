@@ -226,7 +226,7 @@ class ServiceResource(NcDjangoModelResource):
 
             base_filename = tmp_file.filename[: -len(tmp_file.extension) - 1]
             name = default_storage.save(
-                f"{bundle.obj.name}/{base_filename}.nc",
+                os.path.join(SERVICE_DATA_ROOT, bundle.obj.name, f"{base_filename}.nc"),
                 fp,
             )
 
