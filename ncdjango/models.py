@@ -13,7 +13,7 @@ from .utils import auto_memoize
 
 logger = logging.getLogger(__name__)
 
-SERVICE_DATA_ROOT = getattr(settings, 'NC_SERVICE_DATA_ROOT', '/var/ncdjango/services/')
+SERVICE_DATA_ROOT = getattr(settings, "NC_SERVICE_DATA_ROOT", "services/")
 TEMPORARY_FILE_LOCATION = getattr(settings, 'NC_TEMPORARY_FILE_LOCATION', 'temp')
 USER_MODEL = getattr(settings, 'AUTH_USER_MODEL', 'auth.User')
 
@@ -45,7 +45,9 @@ class Service(models.Model):
 
     name = models.CharField(max_length=256, db_index=True, unique=True)
     description = models.TextField(null=True)
-    data_path = models.FilePathField(path=SERVICE_DATA_ROOT, recursive=True, max_length=1024)
+    data_path = models.FilePathField(
+        path=(settings.MEDIA_ROOT + SERVICE_DATA_ROOT), recursive=True, max_length=1024
+    )
     projection = models.TextField()  # PROJ4 definition
     full_extent = BoundingBoxField()
     initial_extent = BoundingBoxField()
