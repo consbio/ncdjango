@@ -102,7 +102,7 @@ class TemporaryFileResource(NcDjangoModelResource):
                 dataset_path = obj.file.name
             elif obj.extension == "zip":
                 temp_dir = mkdtemp()
-                zf = ZipFile(os.path.join(settings.BASE_DIR, obj.file.name))
+                zf = ZipFile(obj.file.path)
 
                 try:
                     nc_name = None
@@ -226,13 +226,11 @@ class ServiceResource(NcDjangoModelResource):
 
             base_filename = tmp_file.filename[: -len(tmp_file.extension) - 1]
             name = default_storage.save(
-                "{0}{1}/{2}.nc".format(
-                    SERVICE_DATA_ROOT, bundle.obj.name, base_filename
-                ),
+                f"{bundle.obj.name}/{base_filename}.nc",
                 fp,
             )
 
-            bundle.obj.data_path = name[len(SERVICE_DATA_ROOT) :]
+            bundle.obj.data_path = name[: -len(base_filename)]
             bundle.obj.save()
             tmp_file.delete()
 
@@ -251,7 +249,9 @@ class ServiceResource(NcDjangoModelResource):
                     "A model instance matching the provided arguments could not be found."
                 )
 
-        data_file = os.path.join(SERVICE_DATA_ROOT, bundle.obj.data_path)
+        data_file = os.path.join(
+            settings.MEDIA_ROOT, SERVICE_DATA_ROOT, bundle.obj.data_path
+        )
 
         with atomic():
             super(ServiceResource, self).obj_delete(bundle, **kwargs)
