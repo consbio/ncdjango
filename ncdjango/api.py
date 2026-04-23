@@ -230,7 +230,7 @@ class ServiceResource(NcDjangoModelResource):
                 fp,
             )
 
-            bundle.obj.data_path = name[: -(len(base_filename) + 3)]
+            bundle.obj.data_path = name[: -(len(base_filename) + 4)]
             bundle.obj.save()
             tmp_file.delete()
 
