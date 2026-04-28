@@ -222,11 +222,11 @@ class ServiceResource(NcDjangoModelResource):
                         HttpBadRequest("Could not find .nc file in zip archive")
                     )
 
-                os.mkdir(dest_folder_path)
-                with open(dest_file_path, "x") as fp:
+                os.makedirs(dest_folder_path)
+                with open(dest_file_path, "xb") as fp:
                     fp.write(zf.read(name))
             else:
-                os.mkdir(dest_folder_path)
+                os.makedirs(dest_folder_path)
                 shutil.copyfile(tmp_file.path, dest_file_path)
 
             bundle.obj.data_path = relative_dest_path
