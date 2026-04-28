@@ -14,7 +14,12 @@ from trefoil.render.renderers.stretched import StretchedRenderer
 from trefoil.utilities.color import Color
 from trefoil.utilities.proj import is_latlong
 
-from ncdjango.models import SERVICE_DATA_ROOT, Service, Variable, ProcessingResultService
+from ncdjango.models import (
+    SERVICE_DATA_ROOT,
+    Service,
+    Variable,
+    ProcessingResultService,
+)
 
 from . import params
 from .data import is_raster
@@ -91,7 +96,7 @@ def process_web_outputs(results, job, publish_raster_results=False, renderer_or_
         if is_raster(v) and publish_raster_results:
             service_name = '{0}/{1}'.format(job.uuid, k)
             rel_path = '{}.nc'.format(service_name)
-            abs_path = os.path.join(settings.MEDIA_ROOT, SERVICE_DATA_ROOT, rel_path)
+            abs_path = os.path.join(SERVICE_DATA_ROOT, rel_path)
             os.makedirs(os.path.dirname(abs_path))
 
             with Dataset(abs_path, 'w', format='NETCDF4') as ds:
