@@ -46,7 +46,7 @@ class Service(models.Model):
     name = models.CharField(max_length=256, db_index=True, unique=True)
     description = models.TextField(null=True)
     data_path = models.FilePathField(
-        path=(settings.MEDIA_ROOT + SERVICE_DATA_ROOT), recursive=True, max_length=1024
+        path=SERVICE_DATA_ROOT, recursive=True, max_length=1024
     )
     projection = models.TextField()  # PROJ4 definition
     full_extent = BoundingBoxField()

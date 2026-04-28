@@ -1,4 +1,3 @@
-import io
 import logging
 import os
 import shutil
@@ -8,8 +7,6 @@ from zipfile import ZipFile
 from django.conf import settings
 from django.urls import re_path
 from django.core.exceptions import ObjectDoesNotExist
-from django.core.files.base import File
-from django.core.files.storage import default_storage
 from django.db.transaction import atomic
 from pyproj import Proj
 from tastypie import fields
@@ -208,6 +205,11 @@ class ServiceResource(NcDjangoModelResource):
             )
             tmp_file.file.open()
 
+            base_filename = tmp_file.filename[: -len(tmp_file.extension) - 1]
+            relative_dest_path = os.path.join(bundle.obj.name, f"{base_filename}.nc")
+            dest_folder_path = os.path.join(SERVICE_DATA_ROOT, bundle.obj.name)
+            dest_file_path = os.path.join(SERVICE_DATA_ROOT, relative_dest_path)
+
             if tmp_file.extension.lower() == "zip":
                 zf = ZipFile(tmp_file.file, "r")
                 nc_name = None
@@ -219,18 +221,15 @@ class ServiceResource(NcDjangoModelResource):
                     raise ImmediateHttpResponse(
                         HttpBadRequest("Could not find .nc file in zip archive")
                     )
-                fp = File(io.BytesIO(zf.read(name)))
+
+                os.mkdir(dest_folder_path)
+                with open(dest_file_path, "x") as fp:
+                    fp.write(zf.read(name))
             else:
-                fp = File(tmp_file.file)
-            fp.open()
+                os.mkdir(dest_folder_path)
+                shutil.copyfile(tmp_file.path, dest_file_path)
 
-            base_filename = tmp_file.filename[: -len(tmp_file.extension) - 1]
-            name = default_storage.save(
-                os.path.join(SERVICE_DATA_ROOT, bundle.obj.name, f"{base_filename}.nc"),
-                fp,
-            )
-
-            bundle.obj.data_path = name
+            bundle.obj.data_path = relative_dest_path
             bundle.obj.save()
             tmp_file.delete()
 
