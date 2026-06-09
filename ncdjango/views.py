@@ -80,7 +80,7 @@ class NetCdfDatasetMixin(object):
         """Opens and returns the NetCDF dataset associated with a service, or returns a previously-opened dataset"""
 
         if not self.dataset:
-            path = os.path.join(settings.MEDIA_ROOT, service.data_path)
+            path = os.path.join(SERVICE_DATA_ROOT, service.data_path)
             self.dataset = netCDF4.Dataset(path, "r")
         return self.dataset
 

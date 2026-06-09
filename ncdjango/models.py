@@ -13,9 +13,9 @@ from .utils import auto_memoize
 
 logger = logging.getLogger(__name__)
 
-SERVICE_DATA_ROOT = getattr(settings, "NC_SERVICE_DATA_ROOT", "services/")
-TEMPORARY_FILE_LOCATION = getattr(settings, 'NC_TEMPORARY_FILE_LOCATION', 'temp')
-USER_MODEL = getattr(settings, 'AUTH_USER_MODEL', 'auth.User')
+SERVICE_DATA_ROOT = getattr(settings, "NC_SERVICE_DATA_ROOT", "/var/ncdjango/services/")
+TEMPORARY_FILE_LOCATION = getattr(settings, "NC_TEMPORARY_FILE_LOCATION", "temp")
+USER_MODEL = getattr(settings, "AUTH_USER_MODEL", "auth.User")
 
 
 class Service(models.Model):
@@ -25,28 +25,28 @@ class Service(models.Model):
     """
 
     CALENDAR_CHOICES = (
-        ('standard', 'Standard Gregorian'),
-        ('noleap', 'Standard, no leap years'),
-        ('360', '360-day years')
+        ("standard", "Standard Gregorian"),
+        ("noleap", "Standard, no leap years"),
+        ("360", "360-day years"),
     )
 
     TIME_UNITS_CHOICES = (
-        ('milliseconds', 'Milliseconds'),
-        ('seconds', 'Seconds'),
-        ('minutes', 'Minutes'),
-        ('hours', 'Hours'),
-        ('days', 'Days'),
-        ('weeks', 'Weeks'),
-        ('months', 'Months'),
-        ('years', 'Years'),
-        ('decades', 'Decades'),
-        ('centuries', 'Centuries')
+        ("milliseconds", "Milliseconds"),
+        ("seconds", "Seconds"),
+        ("minutes", "Minutes"),
+        ("hours", "Hours"),
+        ("days", "Days"),
+        ("weeks", "Weeks"),
+        ("months", "Months"),
+        ("years", "Years"),
+        ("decades", "Decades"),
+        ("centuries", "Centuries"),
     )
 
     name = models.CharField(max_length=256, db_index=True, unique=True)
     description = models.TextField(null=True)
     data_path = models.FilePathField(
-        path=(settings.MEDIA_ROOT + SERVICE_DATA_ROOT), recursive=True, max_length=1024
+        path=SERVICE_DATA_ROOT, recursive=True, max_length=1024
     )
     projection = models.TextField()  # PROJ4 definition
     full_extent = BoundingBoxField()
@@ -55,17 +55,25 @@ class Service(models.Model):
     time_start = models.DateTimeField(null=True)
     time_end = models.DateTimeField(null=True)
     time_interval = models.PositiveIntegerField(null=True)
-    time_interval_units = models.CharField(max_length=15, choices=TIME_UNITS_CHOICES, null=True)
+    time_interval_units = models.CharField(
+        max_length=15, choices=TIME_UNITS_CHOICES, null=True
+    )
     calendar = models.CharField(max_length=10, choices=CALENDAR_CHOICES, null=True)
     render_top_layer_only = models.BooleanField(default=True)
 
     def save(self, *args, **kwargs):
         has_required_time_fields = (
-            self.time_start and self.time_end and self.time_interval and self.time_interval_units and self.calendar
+            self.time_start
+            and self.time_end
+            and self.time_interval
+            and self.time_interval_units
+            and self.calendar
         )
 
         if self.supports_time and not has_required_time_fields:
-            raise ValidationError("Service supports time but is missing one or more time-related fields")
+            raise ValidationError(
+                "Service supports time but is missing one or more time-related fields"
+            )
 
         return super(Service, self).save(*args, **kwargs)
 
@@ -93,54 +101,58 @@ class Variable(models.Model):
     time_steps = models.PositiveIntegerField(null=True)
 
     class Meta:
-        unique_together = ('variable', 'service')
+        unique_together = ("variable", "service")
 
     @property
     @auto_memoize
     def time_stops(self):
-        """ Valid time steps for this service as a list of datetime objects. """
+        """Valid time steps for this service as a list of datetime objects."""
 
         if not self.supports_time:
             return []
 
-        if self.service.calendar == 'standard':
+        if self.service.calendar == "standard":
             units = self.service.time_interval_units
             interval = self.service.time_interval
             steps = [self.time_start]
 
-            if units in ('years', 'decades', 'centuries'):
-                if units == 'years':
+            if units in ("years", "decades", "centuries"):
+                if units == "years":
                     years = interval
-                elif units == 'decades':
+                elif units == "decades":
                     years = 10 * interval
                 else:
                     years = 100 * interval
 
                 next_value = lambda x: x.replace(year=x.year + years)
-            elif units == 'months':
+            elif units == "months":
+
                 def _fn(x):
                     year = x.year + (x.month + interval - 1) // 12
                     month = (x.month + interval) % 12 or 12
                     day = min(x.day, calendar.monthrange(year, month)[1])
 
                     return x.replace(year=year, month=month, day=day)
+
                 next_value = _fn
             else:
-                if units == 'milliseconds':
+                if units == "milliseconds":
                     delta = datetime.timedelta(milliseconds=interval)
-                elif units == 'seconds':
+                elif units == "seconds":
                     delta = datetime.timedelta(seconds=interval)
-                elif units == 'minutes':
+                elif units == "minutes":
                     delta = datetime.timedelta(minutes=interval)
-                elif units == 'hours':
+                elif units == "hours":
                     delta = datetime.timedelta(hours=interval)
-                elif units == 'days':
+                elif units == "days":
                     delta = datetime.timedelta(days=interval)
-                elif units == 'weeks':
+                elif units == "weeks":
                     delta = datetime.timedelta(weeks=interval)
                 else:
                     raise ValidationError(
-                        "Service has an invalid time_interval_units: {}".format(self.service.time_interval_units)
+                        "Service has an invalid time_interval_units: {}".format(
+                            self.service.time_interval_units
+                        )
                     )
 
                 next_value = lambda x: x + delta
@@ -157,9 +169,13 @@ class Variable(models.Model):
             raise NotImplementedError
 
     def save(self, *args, **kwargs):
-        has_required_time_fields = (self.time_dimension and self.time_start and self.time_end)
+        has_required_time_fields = (
+            self.time_dimension and self.time_start and self.time_end
+        )
         if self.supports_time and not has_required_time_fields:
-            raise ValidationError("Variable supports time but is missing one or more time-related fields")
+            raise ValidationError(
+                "Variable supports time but is missing one or more time-related fields"
+            )
 
         return super(Variable, self).save(*args, **kwargs)
 
@@ -176,7 +192,7 @@ class TemporaryFile(models.Model):
     @property
     def extension(self):
         if self.filename.find(".") != -1:
-            return self.filename[self.filename.rfind(".") + 1:]
+            return self.filename[self.filename.rfind(".") + 1 :]
         else:
             return ""
 
@@ -193,7 +209,7 @@ models.signals.post_delete.connect(temporary_file_deleted, sender=TemporaryFile)
 
 
 class ProcessingJob(models.Model):
-    """ An active, completed, or failed geoprocessing job. """
+    """An active, completed, or failed geoprocessing job."""
 
     uuid = models.CharField(max_length=36, default=uuid.uuid4, db_index=True)
     job = models.CharField(max_length=100)
@@ -206,7 +222,7 @@ class ProcessingJob(models.Model):
 
     @property
     def status(self):
-        """ The status of the celery task for this job. """
+        """The status of the celery task for this job."""
 
         return AsyncResult(self.celery_id).status.lower()
 
