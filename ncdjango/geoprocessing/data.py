@@ -101,8 +101,8 @@ class Raster(numpy.ma.MaskedArray):
 
         cell_size = self.extent.width / self.shape[self.x_dim], self.extent.height / self.shape[self.y_dim]
         cell_index = [
-            int(float(x - self.extent.xmin) / cell_size[0]),
-            int(float(y - self.extent.ymin) / cell_size[1])
+            round(float(x - self.extent.xmin) / cell_size[0]),
+            round(float(y - self.extent.ymin) / cell_size[1])
         ]
         if not self.y_increasing:
             cell_index[1] = self.shape[self.y_dim] - cell_index[1] - 1
