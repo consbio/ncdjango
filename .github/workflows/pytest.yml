@@ -37,13 +37,13 @@ jobs:
     - name: Build HDF5
       if: steps.cache-hdf5.outputs.cache-hit != 'true'
       run: |
-        wget https://github.com/HDFGroup/hdf5/releases/download/2.2.0/hdf5-2.2.0.tar.gz
-        tar -xf hdf5-2.2.0.tar.gz
-        cd hdf5-2.2.0 && ./configure --prefix=/usr/local && make
+        wget https://github.com/HDFGroup/hdf5/releases/download/hdf5_1.14.6/hdf5-1.14.6.tar.gz
+        tar -xf hdf5-1.14.6.tar.gz
+        cd hdf5-1.14.6 && ./configure --prefix=/usr/local && make
       working-directory: libs-hdf5
     - name: Install HDF5
       run: |
-        cd hdf5-2.2.0 && sudo make install
+        cd hdf5-1.14.6 && sudo make install
       working-directory: libs-hdf5
     - name: Cache NetCDF
       id: cache-netcdf
